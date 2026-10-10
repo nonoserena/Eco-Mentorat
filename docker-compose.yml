@@ -1,0 +1,87 @@
+# ============================================================
+# ORCHESTRATION DOCKER COMPOSE - ÉCO-MENTORAT
+# Stack complète : MongoDB + Redis + API Backend + Frontend
+# ============================================================
+
+services:
+  # 1. Base de données NoSQL
+  mongodb:
+    image: mongo:7.0
+    container_name: eco-mentorat-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: eco_mentorat
+    volumes:
+      - mongo-data:/data/db
+      - ./server/backups:/backups
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eco-network
+
+  # 2. Cache & Adaptateur pub/sub Socket.io
+  redis:
+    image: redis:7-alpine
+    container_name: eco-mentorat-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eco-network
+
+  # 3. API Backend Express
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: eco-mentorat-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://mongodb:27017/eco_mentorat
+      JWT_SECRET: ${JWT_SECRET:-1e55b8e04f0cbd0b9a5eafbb2c36722a8e2e2046bf000309e2f8ce02dfd63f0184753bace709532f0a6cb497bd24ab74d42ed7255da9819fa69b174e9515e36c}
+      CLIENT_URL: http://localhost
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - eco-network
+
+  # 4. Frontend Client Nginx
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: eco-mentorat-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - eco-network
+
+volumes:
+  mongo-data:
+    name: eco-mentorat-mongo-data
+
+networks:
+  eco-network:
+    name: eco-mentorat-network
+    driver: bridge
