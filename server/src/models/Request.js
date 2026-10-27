@@ -35,6 +35,22 @@ const RequestSchema = new mongoose.Schema({
         trim: true,
         index: true
     },
+    sourceLang: {
+        type: String,
+        default: 'fr',
+        trim: true,
+        lowercase: true
+    },
+    titleTranslations: {
+        type: Map,
+        of: String,
+        default: {}
+    },
+    descriptionTranslations: {
+        type: Map,
+        of: String,
+        default: {}
+    },
     status: {
         type: String,
         enum: ['open', 'in-progress', 'completed', 'contested'],

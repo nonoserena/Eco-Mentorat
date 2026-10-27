@@ -17,20 +17,21 @@ export default function Home() {
     const pollingRef = useRef(null);
 
     const fetchRequests = async () => {
-        setLoading(true);
-        try {
-            const res = await getRequests(page, 10);
-            setRequests(res.data.requests);
-            setTotalPages(res.data.totalPages);
-            setTotal(res.data.total);
-        } catch {
-            setError('Impossible de charger les demandes.');
-        } finally {
-            setLoading(false);
-        }
-    };
+            setLoading(true);
+            try {
+                const lang = user?.preferredLang || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
+                const res = await getRequests(page, 10, lang);
+                setRequests(res.data.requests);
+                setTotalPages(res.data.totalPages);
+                setTotal(res.data.total);
+            } catch {
+                setError('Impossible de charger les demandes.');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    useEffect(() => { fetchRequests(); }, [page]);
+        useEffect(() => { fetchRequests(); }, [page, user?.preferredLang]);
 
     // FIX : Polling utilise getMyRequests pour détecter les demandes in-progress
     useEffect(() => {
@@ -176,9 +177,12 @@ export default function Home() {
                             </div>
 
                             <div className="col-span-4 pr-4">
-                                <p className="text-gray-800 font-semibold text-sm truncate">{req.title}</p>
-                                <p className="text-gray-400 text-xs mt-0.5 truncate">{req.description}</p>
-                            </div>
+                                                            <p className="text-gray-800 font-semibold text-sm truncate">{req.title_display || req.title}</p>
+                                                            <p className="text-gray-400 text-xs mt-0.5 truncate">{req.description_display || req.description}</p>
+                                                            {req.title_translated && (
+                                                              <p className="text-[11px] text-violet-600 mt-1">Traduit {req.sourceLang}→{req.viewerLang} via {req.engine} • Original: {req.title_original}</p>
+                                                            )}
+                                                        </div>
 
                             <div className="col-span-2">
                                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(req.skillTag)}`}>

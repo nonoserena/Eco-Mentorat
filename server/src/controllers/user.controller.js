@@ -22,6 +22,16 @@ class UserController {
         }
     }
 
+    static async updateLang(req, res, next) {
+        try {
+            const { preferredLang } = req.body;
+            const user = await UserService.updatePreferredLang(req.user.id, preferredLang);
+            res.status(200).json({ status: 'success', user });
+        } catch (err) {
+            next(err);
+        }
+    }
+
     static async getPortfolio(req, res, next) {
         try {
             const { id } = req.params;

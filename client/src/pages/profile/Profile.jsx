@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { getPortfolio, getMyProfile } from '../../services/api';
+import { getPortfolio, getMyProfile, updateMyLang } from '../../services/api';
 
 const getRankStyle = (rank) => {
     const styles = {
@@ -141,6 +141,20 @@ export default function Profile() {
                                         </span>
                                     </div>
                                     <p className="text-gray-500 text-sm mb-3">{profileData?.email}</p>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="text-xs text-gray-500">🌍 Langue pays :</span>
+                                      <select value={profileData?.preferredLang || 'fr'} onChange={async (e) => { try { const res = await updateMyLang(e.target.value); updateUser(res.data.user); setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang })); localStorage.setItem('user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('user') || '{}')), preferredLang: res.data.user.preferredLang })); } catch { alert('Changement de langue impossible.'); } }} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-400">
+                                        <option value="fr">🇫🇷 Français</option>
+                                        <option value="ja">🇯🇵 日本語</option>
+                                        <option value="ar">🇲🇦 العربية</option>
+                                        <option value="pt">🇧🇷 Português</option>
+                                        <option value="en">🇬🇧 English</option>
+                                        <option value="es">🇪🇸 Español</option>
+                                        <option value="wo">🇸🇳 Wolof</option>
+                                        <option value="zh">🇨🇳 中文</option>
+                                      </select>
+                                      <span className="text-[11px] text-gray-400">Feed traduit auto via Muse</span>
+                                    </div>
                                     <div>
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-xs text-gray-500">Progression XP</span>

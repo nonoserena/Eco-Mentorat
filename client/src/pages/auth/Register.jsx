@@ -14,8 +14,8 @@ export default function Register() {
 
     const [step, setStep]   = useState(1); // Étape 1 : infos, Étape 2 : compétences
     const [formData, setFormData] = useState({
-        username: '', email: '', password: '', confirmPassword: ''
-    });
+            username: '', email: '', password: '', confirmPassword: '', preferredLang: 'fr'
+        });
     const [skillsSelectionnés, setSkillsSelectionnés] = useState([]);
     const [autreSkill, setAutreSkill]                 = useState('');
     const [error, setError]                           = useState('');
@@ -61,11 +61,12 @@ export default function Register() {
         setLoading(true);
         try {
             await register({
-                username: formData.username,
-                email: formData.email,
-                password: formData.password,
-                skillsDeclarated: skillsSelectionnés
-            });
+                            username: formData.username,
+                            email: formData.email,
+                            password: formData.password,
+                            skillsDeclarated: skillsSelectionnés,
+                            preferredLang: formData.preferredLang || 'fr'
+                        });
             navigate('/home');
         } catch (err) {
             setError(err.response?.data?.message || 'Une erreur est survenue.');
@@ -219,21 +220,42 @@ export default function Register() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Confirmer le mot de passe
-                                    </label>
-                                    <input
-                                        type="password"
-                                        name="confirmPassword"
-                                        value={formData.confirmPassword}
-                                        onChange={handleChange}
-                                        placeholder="••••••••"
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
-                                    />
-                                </div>
+                                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                                        Confirmer le mot de passe
+                                                                    </label>
+                                                                    <input
+                                                                        type="password"
+                                                                        name="confirmPassword"
+                                                                        value={formData.confirmPassword}
+                                                                        onChange={handleChange}
+                                                                        placeholder="••••••••"
+                                                                        required
+                                                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
+                                                                    />
+                                                                </div>
 
-                                <button
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                                        🌍 Ma langue pays — le feed sera traduit pour moi
+                                                                    </label>
+                                                                    <select
+                                                                        name="preferredLang"
+                                                                        value={formData.preferredLang}
+                                                                        onChange={handleChange}
+                                                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
+                                                                    >
+                                                                        <option value="fr">🇫🇷 Français (Cameroun)</option>
+                                                                        <option value="ja">🇯🇵 日本語 (Osaka)</option>
+                                                                        <option value="ar">🇲🇦 العربية (Maroc)</option>
+                                                                        <option value="pt">🇧🇷 Português (Brésil)</option>
+                                                                        <option value="en">🇬🇧 English</option>
+                                                                        <option value="es">🇪🇸 Español</option>
+                                                                        <option value="wo">🇸🇳 Wolof</option>
+                                                                        <option value="zh">🇨🇳 中文</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <button
                                     type="submit"
                                     className="w-full bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white font-semibold py-3 rounded-xl transition shadow-md mt-2"
                                 >

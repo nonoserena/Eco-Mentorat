@@ -32,6 +32,9 @@ router.get(
 // 3. Mon profil frais
 router.get('/me', UserController.getMyProfile);
 
+// 3b. Changer ma langue pays (JP voit JA, AR voit AR, BR voit PT)
+router.patch('/me/lang', UserController.updateLang);
+
 // 4. Portfolio PDF certifié
 router.get(
     '/:id/portfolio',

@@ -68,6 +68,15 @@ class UserService {
     /**
      * Récupère le profil authentifié de l'utilisateur courant
      */
+    static async updatePreferredLang(userId, preferredLang) {
+        const lang = String(preferredLang || '').toLowerCase().trim();
+        const allowed = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'];
+        if (!allowed.includes(lang)) throw new AppError('Langue non supportée.', 400);
+        const user = await User.findByIdAndUpdate(userId, { preferredLang: lang }, { new: true }).lean();
+        if (!user) throw new AppError('Utilisateur introuvable.', 404);
+        return { id: user._id, username: user.username, email: user.email, preferredLang: user.preferredLang };
+    }
+
     static async getMyProfile(userId) {
         const user = await User.findById(userId).lean();
         if (!user) {
@@ -78,6 +87,7 @@ class UserService {
             id: user._id,
             username: user.username,
             email: user.email,
+            preferredLang: user.preferredLang || 'fr',
             xpPoints: user.xpPoints,
             rankTitle: user.rankTitle,
             requestsLeft: user.requestsLeft,

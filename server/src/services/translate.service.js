@@ -2,7 +2,7 @@
 // Texte uniquement (<1Ko/message), cache low-data Afrique-first + fallback offline jury.
 const Muse = require('./muse.service');
 
-const SUPPORTED = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'];
+const SUPPORTED = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'];
 const cache = new Map(); // key -> translated string (LRU simple)
 
 function cacheKey(text, sourceLang, targetLang, skillTag) {

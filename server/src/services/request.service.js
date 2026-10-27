@@ -1,6 +1,7 @@
 const Request = require('../models/Request');
 const User = require('../models/User');
 const AppError = require('../errors/AppError');
+const TranslateService = require('./translate.service');
 const { nettoyerEtRegrouperTag } = require('../utils/tagNormalizer');
 const { contientContenuInterdit } = require('../utils/antiMarket');
 const { calculerScorePondere } = require('../utils/reputation');
@@ -23,11 +24,15 @@ class RequestService {
         }
 
         const tagStd = nettoyerEtRegrouperTag(skillTag);
+        const sourceLang = TranslateService.detectLanguage
+            ? TranslateService.detectLanguage(`${title} ${description}`, student.preferredLang || 'fr')
+            : TranslateService.normalizeLang(student.preferredLang, 'fr');
         const newRequest = new Request({
             requesterId,
             title,
             description,
-            skillTag: tagStd
+            skillTag: tagStd,
+            sourceLang
         });
 
         await newRequest.save();
@@ -53,28 +58,66 @@ class RequestService {
     }
 
     /**
-     * Récupérer toutes les demandes actives
+     * Localise une liste de demandes pour la langue du lecteur (JP voit JA, AR voit AR, BR voit PT)
+     * Cache en base titleTranslations/descriptionTranslations pour low-data Afrique-first.
      */
-    static async getAllRequests({ page = 1, limit = 20 }) {
-        const skip = (page - 1) * limit;
-        const [requests, total] = await Promise.all([
-            Request.find({ status: { $in: ['open', 'in-progress'] } })
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            Request.countDocuments({ status: { $in: ['open', 'in-progress'] } })
-        ]);
-
-        return {
-            total,
-            page,
-            totalPages: Math.ceil(total / limit),
-            requests
-        };
+    static async localizeRequests(requests, viewerLang) {
+        const target = TranslateService.normalizeLang(viewerLang, 'fr');
+        return Promise.all((requests || []).map(async (r) => {
+            const source = TranslateService.normalizeLang(r.sourceLang || 'fr', 'fr');
+            const base = { ...r, sourceLang: source };
+            if (source === target) {
+                return { ...base, title_display: r.title, description_display: r.description, title_translated: null, description_translated: null, viewerLang: target, engine: 'none' };
+            }
+            const tMap = r.titleTranslations || {};
+            const dMap = r.descriptionTranslations || {};
+            const tCached = (tMap instanceof Map) ? tMap.get(target) : tMap[target];
+            const dCached = (dMap instanceof Map) ? dMap.get(target) : dMap[target];
+            if (tCached && dCached) {
+                return { ...base, title_display: tCached, description_display: dCached, title_translated: tCached, description_translated: dCached, title_original: r.title, description_original: r.description, viewerLang: target, engine: 'cache' };
+            }
+            try {
+                const [tRes, dRes] = await Promise.all([
+                    tCached ? { translated: tCached, engine: 'cache' } : TranslateService.translateText(r.title, target, { sourceLang: source, skillTag: r.skillTag }),
+                    dCached ? { translated: dCached, engine: 'cache' } : TranslateService.translateText(r.description, target, { sourceLang: source, skillTag: r.skillTag })
+                ]);
+                try {
+                    const setOps = {};
+                    if (!tCached) setOps[`titleTranslations.${target}`] = tRes.translated;
+                    if (!dCached) setOps[`descriptionTranslations.${target}`] = dRes.translated;
+                    if (Object.keys(setOps).length) await Request.updateOne({ _id: r._id }, { $set: setOps });
+                } catch {}
+                return { ...base, title_display: tRes.translated, description_display: dRes.translated, title_translated: tRes.translated, description_translated: dRes.translated, title_original: r.title, description_original: r.description, viewerLang: target, engine: dRes.engine || tRes.engine };
+            } catch {
+                return { ...base, title_display: r.title, description_display: r.description, viewerLang: target, engine: 'passthrough' };
+            }
+        }));
     }
 
-    static async getMyRequests(requesterId, { page = 1, limit = 50 }) {
+    /**
+         * Récupérer toutes les demandes actives
+         */
+        static async getAllRequests({ page = 1, limit = 20, viewerLang = 'fr' }) {
+            const skip = (page - 1) * limit;
+            const [requests, total] = await Promise.all([
+                Request.find({ status: { $in: ['open', 'in-progress'] } })
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                Request.countDocuments({ status: { $in: ['open', 'in-progress'] } })
+            ]);
+            const localized = await this.localizeRequests(requests, viewerLang);
+
+            return {
+                total,
+                page,
+                totalPages: Math.ceil(total / limit),
+                requests: localized
+            };
+        }
+
+    static async getMyRequests(requesterId, { page = 1, limit = 50, viewerLang = 'fr' }) {
         const skip = (page - 1) * limit;
         const [requests, total] = await Promise.all([
             Request.find({ requesterId })
@@ -85,10 +128,10 @@ class RequestService {
             Request.countDocuments({ requesterId })
         ]);
 
-        return { total, page, totalPages: Math.ceil(total / limit), requests };
+        return { total, page, totalPages: Math.ceil(total / limit), requests: await this.localizeRequests(requests, viewerLang) };
     }
 
-    static async getMyHelps(mentorId, { page = 1, limit = 20 }) {
+    static async getMyHelps(mentorId, { page = 1, limit = 20, viewerLang = 'fr' }) {
         const skip = (page - 1) * limit;
         const [requests, total] = await Promise.all([
             Request.find({ mentorId })
@@ -99,10 +142,10 @@ class RequestService {
             Request.countDocuments({ mentorId })
         ]);
 
-        return { total, page, totalPages: Math.ceil(total / limit), requests };
+        return { total, page, totalPages: Math.ceil(total / limit), requests: await this.localizeRequests(requests, viewerLang) };
     }
 
-    static async getHistory({ page = 1, limit = 20 }) {
+    static async getHistory({ page = 1, limit = 20, viewerLang = 'fr' }) {
         const skip = (page - 1) * limit;
         const [requests, total] = await Promise.all([
             Request.find({ status: 'completed' })
@@ -113,13 +156,14 @@ class RequestService {
             Request.countDocuments({ status: 'completed' })
         ]);
 
-        return { total, page, totalPages: Math.ceil(total / limit), requests };
+        return { total, page, totalPages: Math.ceil(total / limit), requests: await this.localizeRequests(requests, viewerLang) };
     }
 
-    static async getRequestById(requestId) {
+    static async getRequestById(requestId, viewerLang = 'fr') {
         const request = await Request.findById(requestId).lean();
         if (!request) throw new AppError('Demande introuvable.', 404);
-        return request;
+        const [localized] = await this.localizeRequests([request], viewerLang);
+        return localized || request;
     }
 
     /**

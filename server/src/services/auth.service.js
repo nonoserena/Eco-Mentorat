@@ -46,7 +46,7 @@ class AuthService {
             });
         }
 
-        const langNorm = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'].includes(String(preferredLang || '').toLowerCase()) ? String(preferredLang).toLowerCase() : 'fr';
+        const langNorm = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'].includes(String(preferredLang || '').toLowerCase()) ? String(preferredLang).toLowerCase() : 'fr';
         const newUser = new User({
             username,
             email,

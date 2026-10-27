@@ -94,7 +94,7 @@ const UserSchema = new mongoose.Schema({
     preferredLang: {
         type: String,
         default: 'fr',
-        enum: ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'],
+        enum: ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'],
         trim: true,
         lowercase: true
     },

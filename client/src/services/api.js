@@ -35,18 +35,18 @@ API.interceptors.response.use(
 export const register = (data) => API.post('/auth/register', data);
 export const login    = (data) => API.post('/auth/login', data);
 
-// Demandes
-export const getRequests     = (page, limit) => API.get(`/requests/all?page=${page}&limit=${limit}`);
+// Demandes (multilingue pays : JP voit JA, AR voit AR, BR voit PT via viewerLang)
+export const getRequests     = (page, limit, lang) => API.get(`/requests/all?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
 export const createRequest   = (data)        => API.post('/requests/create', data);
 export const acceptRequest   = (data)        => API.post('/requests/accept', data);
 export const completeRequest = (data)        => API.post('/requests/complete', data);
 export const replaceMentor   = (data)        => API.post('/requests/replace-mentor', data);
 export const getRequestById  = (id)          => API.get(`/requests/${id}`);
 
-// Historique
-export const getMyRequests = (page, limit) => API.get(`/requests/my-requests?page=${page}&limit=${limit}`);
-export const getMyHelps    = (page, limit) => API.get(`/requests/my-helps?page=${page}&limit=${limit}`);
-export const getHistory    = (page, limit) => API.get(`/requests/history?page=${page}&limit=${limit}`);
+// Historique (multilingue pays)
+export const getMyRequests = (page, limit, lang) => API.get(`/requests/my-requests?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
+export const getMyHelps    = (page, limit, lang) => API.get(`/requests/my-helps?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
+export const getHistory    = (page, limit, lang) => API.get(`/requests/history?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
 
 // Leaderboard
 export const getLeaderboard = (skill) =>
@@ -66,5 +66,6 @@ export const translateText = (data) => API.post('/translate', data);
 // Utilisateurs
 export const getMyProfile     = () => API.get('/users/me');
 export const getPublicProfile = (username) => API.get(`/users/public/${username}`);
+export const updateMyLang = (preferredLang) => API.patch('/users/me/lang', { preferredLang });
 
 export default API;
