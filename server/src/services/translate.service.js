@@ -68,7 +68,7 @@ function demoTranslate(text, sourceLang, targetLang) {
 async function callMuseSpark(text, sourceLang, targetLang, skillTag) {
   try {
     const out = await Muse.sparkTranslate(text, sourceLang, targetLang, skillTag);
-    if (out) return { text: out, engine: 'muse-spark-3' };
+    if (out) return { text: out, engine: Muse.SPARK_MODEL || 'muse-spark-1.3' };
     // Bonus open-weights $10k : fallback Baseten muse-spark-open-1026 si Meta API down
     if (process.env.BASETEN_API_URL) {
       const open = await Muse.sparkOpenChat([
@@ -95,9 +95,9 @@ async function translateText(text, targetLang, opts = {}) {
     return { original: text, translated: cache.get(k), sourceLang: source, targetLang: target, cached: true, engine: 'cache' };
   }
 
-  // 1. Muse Spark reel via $150 (traduction + contexte en 1 appel pour economiser credits)
+  // 1. Muse Spark reel (traduction + contexte en 1 appel)
   let polished = null;
-  let engine = 'muse-spark-3';
+  let engine = Muse.SPARK_MODEL || 'muse-spark-1.3';
   const museRes = await callMuseSpark(clean, source, target, skillTag);
   if (museRes) {
     polished = museRes.text;

@@ -3,16 +3,16 @@
 // + Open-weights : Glimmer + Spark Open (muse-spark-open-1026 via Baseten)
 // Securite : cle jamais exposee au front. Cache + fallback offline pour 2G/jury.
 
-const META_API_URL = process.env.META_MODEL_API_URL || process.env.MUSE_SPARK_API_URL || 'https://api.meta.com/v1';
+const META_API_URL = process.env.META_MODEL_API_URL || process.env.MUSE_SPARK_API_URL || 'https://api.meta.ai/v1';
 const META_API_KEY = process.env.META_API_KEY || process.env.MUSE_API_KEY || '';
-const SPARK_MODEL = process.env.MUSE_SPARK_MODEL || 'muse-spark-3';
+const SPARK_MODEL = process.env.MUSE_SPARK_MODEL || 'muse-spark-1.3';
 const SPARK_OPEN_MODEL = process.env.MUSE_SPARK_OPEN_MODEL || 'meta-models/muse-spark-open-1026';
-const WONDER_MODEL = process.env.MUSE_WONDER_MODEL || 'muse-wonder';
-const TRANSCRIBE_MODEL = process.env.MUSE_TRANSCRIBE_MODEL || 'muse-voice-transcribe';
+const WONDER_MODEL = process.env.MUSE_WONDER_MODEL || 'muse-wonder-1.0';
+const TRANSCRIBE_MODEL = process.env.MUSE_TRANSCRIBE_MODEL || 'muse-voice-transcribe-1.0';
 const BASETEN_URL = process.env.BASETEN_API_URL || '';
 const BASETEN_KEY = process.env.BASETEN_API_KEY || '';
 
-async function postJSON(url, apiKey, body, timeoutMs = 8000) {
+async function postJSON(url, apiKey, body, timeoutMs = 30000) {
   if (!url || !apiKey) return null;
   try {
     const res = await fetch(url, {
@@ -38,7 +38,7 @@ async function sparkChat(messages, opts = {}) {
   const data = await postJSON(url, META_API_KEY, {
     model: opts.model || SPARK_MODEL,
     messages,
-    max_tokens: opts.max_tokens || 400,
+    max_tokens: opts.max_tokens || 2000,
     temperature: opts.temperature ?? 0.3,
   });
   if (!data) return null;
@@ -51,7 +51,7 @@ async function sparkTranslate(text, sourceLang, targetLang, skillTag = 'general'
   const system = `Tu es Muse Spark, traducteur pedagogique. Traduis de ${sourceLang} vers ${targetLang}. Contexte matiere: ${skillTag}. Ton simple etudiant, sens preserve, sans explication. Reponds uniquement la traduction.`;
   const out = await sparkChat(
     [{ role: 'system', content: system }, { role: 'user', content: text }],
-    { max_tokens: 400 }
+    { max_tokens: 2000 }
   );
   return out ? out.trim() : null;
 }
