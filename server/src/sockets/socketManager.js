@@ -90,7 +90,7 @@ class SocketManager {
                                         sourceLang: srcLang,
                                         targetLang: recvLang,
                                         engine: tr.engine,
-                                        poweredBy: 'Meta AI (NLLB-200 + Llama 3)',
+                                        poweredBy: 'Muse Spark (Meta Model API)',
                                         skillTag,
                                         type: 'text',
                                         isMe: false,

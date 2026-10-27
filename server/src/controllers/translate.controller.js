@@ -14,7 +14,7 @@ class TranslateController {
         targetLang: result.targetLang,
         original: result.original,
         translated: result.translated,
-        poweredBy: 'Meta AI (NLLB-200 + Llama 3)'
+        poweredBy: 'Muse Spark (Meta Model API)'
       });
     } catch (err) {
       next(err);

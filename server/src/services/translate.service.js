@@ -1,5 +1,6 @@
-// Meta AI — NLLB-200 + Llama 3 polish + cache low-data Afrique-first
-// Texte uniquement (<1Ko/message), cache mémoire pour éviter re-traductions.
+// Muse Spark series — Traduction universelle hackathon (Meta Model API $150)
+// Texte uniquement (<1Ko/message), cache low-data Afrique-first + fallback offline jury.
+const Muse = require('./muse.service');
 
 const SUPPORTED = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'];
 const cache = new Map(); // key -> translated string (LRU simple)
@@ -53,52 +54,21 @@ function demoTranslate(text, sourceLang, targetLang) {
   return out;
 }
 
-async function callNLLB(text, sourceLang, targetLang) {
-  const url = process.env.TRANSLATE_API_URL;
-  const apiKey = process.env.TRANSLATE_API_KEY;
-  if (!url) return null;
+// Muse Spark series via Meta Model API ($150) — 1 seul appel contextualise (traduction + polish ensemble)
+async function callMuseSpark(text, sourceLang, targetLang, skillTag) {
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify({ text, sourceLang, targetLang, model: 'nllb-200' }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.translatedText || data.translation || data.result || null;
-  } catch {
+    const out = await Muse.sparkTranslate(text, sourceLang, targetLang, skillTag);
+    if (out) return { text: out, engine: 'muse-spark-3' };
+    // Bonus open-weights $10k : fallback Baseten muse-spark-open-1026 si Meta API down
+    if (process.env.BASETEN_API_URL) {
+      const open = await Muse.sparkOpenChat([
+        { role: 'system', content: `Traduis de ${sourceLang} vers ${targetLang}. Contexte: ${skillTag}. Reponds uniquement la traduction.` },
+        { role: 'user', content: text }
+      ]);
+      if (open) return { text: open.trim(), engine: 'muse-spark-open-1026' };
+    }
     return null;
-  }
-}
-
-async function llamaPolish(raw, skillTag, targetLang) {
-  const url = process.env.LLAMA_API_URL;
-  const apiKey = process.env.LLAMA_API_KEY;
-  if (!url || !raw) return raw;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model: 'llama-3',
-        prompt: `Remets cette traduction dans le contexte pédagogique [${skillTag}] en langue ${targetLang}, sans changer le sens, ton simple étudiant: ${raw}`,
-        max_tokens: 300,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return raw;
-    const data = await res.json();
-    return data.text || data.polished || data.result || raw;
-  } catch {
-    return raw;
-  }
+  } catch { return null; }
 }
 
 async function translateText(text, targetLang, opts = {}) {
@@ -115,20 +85,24 @@ async function translateText(text, targetLang, opts = {}) {
     return { original: text, translated: cache.get(k), sourceLang: source, targetLang: target, cached: true, engine: 'cache' };
   }
 
-  // 1. NLLB externe si configuré
-  let raw = await callNLLB(clean, source, target);
-  let engine = 'nllb-200';
-
-  // 2. Fallback démo offline (hackathon stable même sans clé / sans réseau)
-  if (!raw) {
-    raw = demoTranslate(clean, source, target);
-    engine = raw ? 'demo-nllb' : 'passthrough';
+  // 1. Muse Spark reel via $150 (traduction + contexte en 1 appel pour economiser credits)
+  let polished = null;
+  let engine = 'muse-spark-3';
+  const museRes = await callMuseSpark(clean, source, target, skillTag);
+  if (museRes) {
+    polished = museRes.text;
+    engine = museRes.engine;
   }
-  if (!raw) raw = clean; // jamais bloquer le chat
 
-  // 3. Polish Llama 3 contexte pédagogique
-  const polished = await llamaPolish(raw, skillTag, target);
-  if (polished !== raw) engine = `${engine}+llama-3`;
+  // 2. Fallback demo offline (hackathon stable meme sans cle / sans reseau / quota vide)
+  if (!polished) {
+    polished = demoTranslate(clean, source, target);
+    engine = polished ? 'demo-muse-spark-offline' : 'passthrough';
+  }
+  if (!polished) {
+    polished = clean;
+    engine = 'passthrough';
+  } // jamais bloquer le chat
 
   // Cache borné (1000 entrées max, Afrique low-RAM)
   if (cache.size > 1000) {

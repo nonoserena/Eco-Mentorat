@@ -7,37 +7,25 @@ router.get('/', (req, res) => {
   res.status(200).json({
     status: 'success',
     project: 'Eco-Mentorat',
-    poweredBy: 'Meta AI',
-    message: 'Cette API utilise les modeles Meta au coeur du produit.',
+    poweredBy: 'Muse (Meta Model API)',
+    credits: '$150 Meta Model API credits',
+    track: 'Build for Your World - Douala-Osaka sans frontieres de langue, meme en 2G',
+    live: 'muse-spark-3 live via Meta Model API, fallback offline si quota vide',
+    message: 'Cette API utilise les modeles Muse au coeur du produit.',
     models: [
-      {
-        name: 'NLLB-200',
-        usage: 'Traduction universelle feed + chat (200 langues : fr/en/ja/zh/wo/es/ar)',
-        where: 'POST /api/translate + socket send_message -> receive_message',
-        file: 'server/src/services/translate.service.js'
-      },
-      {
-        name: 'Llama 3',
-        usage: 'Polish pedagogique avec contexte skillTag + historique',
-        where: 'translate.service.js llamaPolish()',
-        file: 'server/src/services/translate.service.js'
-      },
-      {
-        name: 'Llama Guard',
-        usage: 'Moderation anti-triche / anti-marche (P0-2 en cours)',
-        where: 'POST /api/requests/create + socket send_message',
-        file: 'server/src/services/moderation.service.js (P0-2)'
-      },
-      {
-        name: 'SeamlessM4T v2',
-        usage: 'Audio -> sous-titres traduits live (P1, audio-first low-debit)',
-        where: 'client/src/pages/chat/Chat.jsx sous-titres',
-        file: 'P1 post-P0'
-      }
+      { name: 'muse-spark-3 (Muse Spark series)', usage: 'Traduction FR->JA feed + chat temps-reel avec contexte skillTag', where: 'POST /api/translate + socket send_message', file: 'muse.service.js sparkTranslate()' },
+      { name: 'muse-voice-transcribe (Muse Voice Transcribe)', usage: 'Audio Opus 12kbps -> sous-titres texte traduits live low-debit', where: 'chat sous-titres', file: 'muse.service.js voiceTranscribe()' },
+      { name: 'muse-spark-3 agent (Moderation)', usage: 'Agent {OK|CHEAT|MARKET} + explication langue maternelle', where: 'POST /requests/create + socket', file: 'muse.service.js sparkModerate() P0-2' },
+      { name: 'muse-wonder (Muse Wonder)', usage: 'Resume session + visuel portfolio + vignette challenge', where: 'session_completed + profil', file: 'P0-3 Best Creative Build' },
+      { name: 'muse-image (Muse Image)', usage: 'Visuels challenges + portfolio employabilite', where: 'LeaderBoard + Profile', file: 'P0-3/P2' },
+      { name: 'SAM 3.1', usage: 'Segmentation photo cahier pour expliquer zone ecrite', where: 'upload image chat', file: 'P1 multimodal' },
+      { name: 'muse-spark-open-1026 (Muse Spark Open)', usage: 'Fallback open-weights via Baseten bonus $10k', where: 'translate fallback', file: 'muse.service.js sparkOpenChat()' },
+      { name: 'muse-glimmer (Muse Glimmer)', usage: 'Open-weights leger Afrique low-RAM', where: 'Baseten/Modal', file: 'Bonus open-weights' },
+      { name: 'muse-code (Muse Code)', usage: 'Agent coding qui a accelere P0-1', where: 'dev', file: 'README + commits' }
     ],
-    demo: 'Douala publie en francais -> Osaka lit en japonais, meme en 2G. Texte <1Ko/message.',
-    video: 'Demo video 3min realisee avec Meta AI',
-    commitTrace: 'git log --grep=meta-ai'
+    demo: 'Douala publie en francais -> Osaka lit en japonais via muse-spark-3, meme en 2G. Texte <1Ko/message.',
+    video: 'Demo video 3min realisee avec Muse Wonder',
+    commitTrace: 'git log --grep=muse'
   });
 });
 
