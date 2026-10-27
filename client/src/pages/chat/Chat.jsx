@@ -32,8 +32,9 @@ export default function Chat() {
     const [hoverRating, setHoverRating]     = useState(0);
     const [completing, setCompleting]       = useState(false);
     const [replacing, setReplacing]         = useState(false);
-    const [blocked, setBlocked]             = useState(false);
-    const [sessionEnded, setSessionEnded]   = useState(false);
+    const [blocked, setBlocked] = useState(false);
+        const [sessionEnded, setSessionEnded] = useState(false);
+        const [showOriginal, setShowOriginal] = useState({});
 
     // ── Charger les infos de la demande ──
     useEffect(() => {
@@ -46,24 +47,34 @@ export default function Chat() {
                 setIsApprenant(req.requesterId?.toString() === myId);
                 setIsMentor(req.mentorId?.toString() === myId);
 
-                // Charger l'historique persistant des messages
-                try {
-                    const histRes = await getChatHistory(requestId);
-                    if (histRes.data?.messages) {
-                        const mapped = histRes.data.messages.map(m => ({
-                            id: m._id,
-                            content: m.content,
-                            type: m.type || 'text',
-                            url: m.fileUrl,
-                            isMe: m.senderId?.toString() === myId,
-                            username: m.senderUsername,
-                            time: new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                        }));
-                        setMessages(mapped);
-                    }
-                } catch (historyErr) {
-                    console.warn('Impossible de charger l\'historique des messages:', historyErr);
-                }
+                // Charger l'historique persistant des messages + traduction dans ma langue
+                                try {
+                                    const histRes = await getChatHistory(requestId);
+                                    if (histRes.data?.messages) {
+                                        const myLang = currentUser?.preferredLang || 'fr';
+                                        const mapped = histRes.data.messages.map(m => {
+                                            let tr = m.content_translated || m.translated || null;
+                                            if (!tr && m.translations) {
+                                                tr = m.translations[myLang] || m.translations?.ja || m.translations?.fr || null;
+                                            }
+                                            return {
+                                                id: m._id,
+                                                content: m.content,
+                                                content_translated: tr,
+                                                translated: tr,
+                                                engine: m.engine || null,
+                                                type: m.type || 'text',
+                                                url: m.fileUrl,
+                                                isMe: m.senderId?.toString() === myId,
+                                                username: m.senderUsername,
+                                                time: new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                            };
+                                        });
+                                        setMessages(mapped);
+                                    }
+                                } catch (historyErr) {
+                                    console.warn('Impossible de charger l\'historique des messages:', historyErr);
+                                }
             } catch (err) {
                 console.error('Erreur chargement demande:', err);
             } finally {
@@ -89,10 +100,34 @@ export default function Chat() {
             });
         });
 
-        // Recevoir un message texte
-        socket.on('receive_message', (msg) => {
-            setMessages(prev => [...prev, msg]);
-        });
+        // Recevoir un message texte + traduction Muse dans ma langue
+                socket.on('receive_message', (msg) => {
+                    const normalized = {
+                        id: msg.id || msg._id || Date.now(),
+                        content: msg.content,
+                        content_translated: msg.content_translated || msg.translated || null,
+                        translated: msg.translated || msg.content_translated || null,
+                        engine: msg.engine || null,
+                        poweredBy: msg.poweredBy || null,
+                        sourceLang: msg.sourceLang || null,
+                        targetLang: msg.targetLang || null,
+                        type: msg.type || 'text',
+                        url: msg.url || msg.fileUrl || null,
+                        isMe: false,
+                        username: msg.username,
+                        time: msg.time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                    };
+                    setMessages(prev => [...prev, normalized]);
+                });
+
+                // Echo expediteur avec traduction pour toggle Voir original
+                socket.on('message_sent', (msg) => {
+                    setMessages(prev => prev.map(m =>
+                        String(m.id) === String(msg.id) || (m.content === msg.content && m.isMe)
+                            ? { ...m, content_translated: msg.content_translated || m.content_translated, targetLang: msg.targetLang, engine: msg.engine }
+                            : m
+                    ));
+                });
 
         // Recevoir un fichier
         socket.on('receive_file', (file) => {
@@ -357,15 +392,29 @@ export default function Chat() {
                                 <p className="text-gray-500 text-xs mb-1 px-1">{msg.username}</p>
                             )}
 
-                            {msg.type === 'text' && (
-                                <div className={`px-4 py-2.5 rounded-2xl text-sm ${
-                                    msg.isMe
-                                        ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-br-none'
-                                        : 'bg-gray-700 text-gray-100 rounded-bl-none'
-                                }`}>
-                                    {msg.content}
-                                </div>
-                            )}
+                            {(!msg.type || msg.type === 'text') && (
+                                                            <div className={`px-4 py-2.5 rounded-2xl text-sm ${
+                                                                msg.isMe
+                                                                    ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-br-none'
+                                                                    : 'bg-gray-700 text-gray-100 rounded-bl-none'
+                                                            }`}>
+                                                                {(msg.content_translated || msg.translated) && !msg.isMe && !showOriginal[msg.id] ? (
+                                                                    <>
+                                                                        <p>{msg.content_translated || msg.translated}</p>
+                                                                        <p className="text-[11px] opacity-70 mt-1 italic">Original FR : {msg.content}</p>
+                                                                        {msg.engine && <p className="text-[10px] opacity-60 mt-0.5">Traduit via {msg.engine}</p>}
+                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: true }))} className="text-[11px] underline opacity-80 mt-1">Voir original</button>
+                                                                    </>
+                                                                ) : (msg.content_translated || msg.translated) && !msg.isMe && showOriginal[msg.id] ? (
+                                                                    <>
+                                                                        <p>{msg.content}</p>
+                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: false }))} className="text-[11px] underline opacity-80 mt-1">Voir traduction</button>
+                                                                    </>
+                                                                ) : (
+                                                                    <p>{msg.content}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
 
                             {msg.type === 'image' && (
                                 <div className={`rounded-2xl overflow-hidden max-w-xs ${msg.isMe ? 'rounded-br-none' : 'rounded-bl-none'}`}>
