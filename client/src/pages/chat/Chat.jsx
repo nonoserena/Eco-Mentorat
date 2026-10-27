@@ -4,7 +4,12 @@ import { io } from 'socket.io-client';
 import { sendMessage, getChatHistory, completeRequest, getRequestById, replaceMentor } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-const SOCKET_URL = 'http://localhost:5000';
+// Docker-first : via Nginx (8082) on passe par le proxy /socket.io/ même origine, en dev on garde 5000
+const getSocketURL = () => {
+    if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return window.location.origin;
+    return 'http://localhost:5000';
+};
+const SOCKET_URL = getSocketURL();
 
 export default function Chat() {
     const { requestId }         = useParams();

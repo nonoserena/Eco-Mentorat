@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+// Docker-first : via Nginx (port 8082) on utilise /api, en dev local on garde 5000
+const getBaseURL = () => {
+    if (import.meta?.env?.VITE_API_URL) return import.meta.env.VITE_API_URL;
+    if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return '/api';
+    return 'http://localhost:5000/api';
+};
+
 const API = axios.create({
-    baseURL: 'http://localhost:5000/api'
+    baseURL: getBaseURL()
 });
 
 // Injecte automatiquement le token JWT
@@ -52,6 +59,9 @@ export const getPortfolio = (id) =>
 // Chat
 export const sendMessage    = (data) => API.post('/chat/message', data);
 export const getChatHistory = (requestId) => API.get(`/chat/${requestId}/history`);
+
+// Meta AI — Traduction universelle NLLB-200 + Llama 3
+export const translateText = (data) => API.post('/translate', data);
 
 // Utilisateurs
 export const getMyProfile     = () => API.get('/users/me');
