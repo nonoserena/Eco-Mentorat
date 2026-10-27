@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+/* ── Eco-Mentorat Design System — Léger Afrique-first (<3Ko) ── */
+:root {
+  --eco: #00C48C;
+  --meta: #7B4DFF;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .text-gradient-eco-meta {
+    background: linear-gradient(100deg, #00C48C 10%, #00A8B5 45%, #7B4DFF 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-eco-meta {
+    background: linear-gradient(135deg, #00C48C 0%, #00A8B5 50%, #7B4DFF 100%);
+  }
+  /* Mode Data Saver : coupe images déco + animations */
+  .data-saver img[data-deco="true"], .data-saver video { display: none !important; }
+  .data-saver * { animation: none !important; transition: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
 /* Tout le reste du vieux code a été supprimé ! */
 /*:root {
   --text: #6b6375;

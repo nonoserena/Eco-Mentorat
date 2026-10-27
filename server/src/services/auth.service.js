@@ -8,13 +8,13 @@ const { nettoyerEtRegrouperTag } = require('../utils/tagNormalizer');
 class AuthService {
     static generateToken(user) {
         return jwt.sign(
-            { id: user._id, username: user.username, email: user.email },
+            { id: user._id, username: user.username, email: user.email, preferredLang: user.preferredLang || 'fr' },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
         );
     }
 
-    static async register({ username, email, password, skillsDeclarated }) {
+    static async register({ username, email, password, skillsDeclarated, preferredLang }) {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             throw new AppError('Cet email est déjà associé à un compte.', 409);
@@ -46,10 +46,12 @@ class AuthService {
             });
         }
 
+        const langNorm = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'].includes(String(preferredLang || '').toLowerCase()) ? String(preferredLang).toLowerCase() : 'fr';
         const newUser = new User({
             username,
             email,
             password: passwordHash,
+            preferredLang: langNorm,
             skillsDeclarated: skillsNormalises,
             skillsMetrics: metricsInitiales
         });
@@ -62,6 +64,7 @@ class AuthService {
                 id: newUser._id,
                 username: newUser.username,
                 email: newUser.email,
+                preferredLang: newUser.preferredLang,
                 xpPoints: newUser.xpPoints,
                 rankTitle: newUser.rankTitle,
                 skillsDeclarated: newUser.skillsDeclarated
@@ -91,6 +94,7 @@ class AuthService {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                preferredLang: user.preferredLang || 'fr',
                 xpPoints: user.xpPoints,
                 rankTitle: user.rankTitle,
                 skillsDeclarated: user.skillsDeclarated

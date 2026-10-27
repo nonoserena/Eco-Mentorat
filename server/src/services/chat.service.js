@@ -7,7 +7,7 @@ class ChatService {
     /**
      * Sauvegarde un message de chat avec validation anti-marché
      */
-    static async saveMessage({ requestId, senderId, senderUsername, content, type = 'text', fileUrl = null, fileName = null }) {
+    static async saveMessage({ requestId, senderId, senderUsername, content, type = 'text', fileUrl = null, fileName = null, sourceLang = 'fr' }) {
         if (!content && !fileUrl) {
             throw new AppError('Le message ou le fichier ne peut pas être vide.', 400);
         }
@@ -36,6 +36,7 @@ class ChatService {
             senderId,
             senderUsername,
             content: content || fileName || 'Fichier partagé',
+            sourceLang: (sourceLang || 'fr').toString().toLowerCase().slice(0,5),
             type,
             fileUrl,
             fileName

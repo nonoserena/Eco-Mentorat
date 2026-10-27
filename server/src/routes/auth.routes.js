@@ -13,7 +13,8 @@ router.post(
         body('username').trim().notEmpty().withMessage("Le nom d'utilisateur est requis.").isLength({ max: 30 }),
         body('email').isEmail().normalizeEmail().withMessage('Email invalide.'),
         body('password').isLength({ min: 8 }).withMessage('Mot de passe trop court (8 caractères min).'),
-        body('skillsDeclarated').optional().isArray()
+        body('skillsDeclarated').optional().isArray(),
+        body('preferredLang').optional().isString().trim().isLength({ min: 2, max: 5 })
     ],
     validate,
     AuthController.register

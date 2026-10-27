@@ -91,6 +91,13 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    preferredLang: {
+        type: String,
+        default: 'fr',
+        enum: ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar'],
+        trim: true,
+        lowercase: true
+    },
     skillsDeclarated: [{
         type: String,
         trim: true

@@ -1,5 +1,8 @@
 const { Server } = require('socket.io');
 const ChatService = require('../services/chat.service');
+const TranslateService = require('../services/translate.service');
+const User = require('../models/User');
+const Request = require('../models/Request');
 
 class SocketManager {
     constructor(httpServer, corsOptions) {
@@ -37,12 +40,13 @@ class SocketManager {
                 console.log(`[SOCKET] ${username || userId} a rejoint le salon ${requestId}`);
             });
 
-            // Réception et persistance d'un message texte
-            socket.on('send_message', async ({ requestId, content, username, userId, time }) => {
+            // Réception Meta AI : persistance + traduction temps-réel (texte <1Ko, Afrique-first)
+            socket.on('send_message', async ({ requestId, content, username, userId, time, sourceLang, targetLang }) => {
                 try {
-                    // Sauvegarde robuste dans la base de données MongoDB
                     const senderId = userId || socket.data?.userId;
+                    const srcLang = TranslateService.normalizeLang(sourceLang, 'fr');
                     let savedMsg = null;
+                    let skillTag = 'general';
 
                     if (requestId && senderId) {
                         savedMsg = await ChatService.saveMessage({
@@ -50,14 +54,73 @@ class SocketManager {
                             senderId,
                             senderUsername: username || 'Anonyme',
                             content,
-                            type: 'text'
+                            type: 'text',
+                            sourceLang: srcLang
                         });
+                        try {
+                            const reqDoc = await Request.findById(requestId).lean();
+                            if (reqDoc) {
+                                skillTag = reqDoc.skillTag || 'general';
+                                // Détecte le receveur pour sa langue maternelle
+                                let receiverId = null;
+                                if (reqDoc.requesterId && reqDoc.requesterId.toString() !== senderId.toString()) receiverId = reqDoc.requesterId;
+                                else if (reqDoc.mentorId && reqDoc.mentorId.toString() !== senderId.toString()) receiverId = reqDoc.mentorId;
+                                let recvLang = TranslateService.normalizeLang(targetLang, null);
+                                if (!recvLang && receiverId) {
+                                    const recv = await User.findById(receiverId).select('preferredLang').lean();
+                                    if (recv) recvLang = TranslateService.normalizeLang(recv.preferredLang, 'fr');
+                                }
+                                if (!recvLang) recvLang = srcLang === 'fr' ? 'ja' : 'fr';
+                                if (recvLang !== srcLang && content) {
+                                    const tr = await TranslateService.translateText(content, recvLang, { sourceLang: srcLang, skillTag });
+                                    // Cache en base pour historique multilingue
+                                    if (savedMsg) {
+                                        savedMsg.translations = savedMsg.translations || new Map();
+                                        savedMsg.translations.set(recvLang, tr.translated);
+                                        savedMsg.sourceLang = srcLang;
+                                        await savedMsg.save();
+                                    }
+                                    const payloadTime = time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                                    // Émet version personnalisée au receveur
+                                    socket.to(requestId.toString()).emit('receive_message', {
+                                        id: savedMsg ? savedMsg._id : Date.now(),
+                                        content,
+                                        content_translated: tr.translated,
+                                        translated: tr.translated,
+                                        sourceLang: srcLang,
+                                        targetLang: recvLang,
+                                        engine: tr.engine,
+                                        poweredBy: 'Meta AI (NLLB-200 + Llama 3)',
+                                        skillTag,
+                                        type: 'text',
+                                        isMe: false,
+                                        username,
+                                        time: payloadTime
+                                    });
+                                    // Écho à l'expéditeur avec traduction pour toggle Voir original
+                                    socket.emit('message_sent', {
+                                        id: savedMsg ? savedMsg._id : Date.now(),
+                                        content,
+                                        content_translated: tr.translated,
+                                        sourceLang: srcLang,
+                                        targetLang: recvLang,
+                                        engine: tr.engine,
+                                        time: payloadTime
+                                    });
+                                    return;
+                                }
+                            }
+                        } catch (trErr) {
+                            console.warn(`[SOCKET I18N] Fallback original : ${trErr.message}`);
+                        }
                     }
 
-                    // Diffusion temps réel dans la room
+                    // Fallback : diffusion originale (jamais bloquer le chat)
                     socket.to(requestId.toString()).emit('receive_message', {
                         id: savedMsg ? savedMsg._id : Date.now(),
                         content,
+                        content_translated: null,
+                        sourceLang: srcLang,
                         type: 'text',
                         isMe: false,
                         username,

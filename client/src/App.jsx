@@ -7,7 +7,7 @@ import Login         from './pages/auth/Login';
 import Register      from './pages/auth/Register';
 import Home          from './pages/dashboard/Home';
 import CreateRequest from './pages/dashboard/CreateRequest';
-import Leaderboard   from './pages/dashboard/Leaderboard';
+import Leaderboard   from './pages/dashboard/LeaderBoard';
 import History       from './pages/dashboard/History';
 import Profile       from './pages/profile/Profile';
 import Chat          from './pages/chat/Chat';

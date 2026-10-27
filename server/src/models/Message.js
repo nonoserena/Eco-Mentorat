@@ -23,6 +23,17 @@ const MessageSchema = new mongoose.Schema({
         trim: true,
         maxlength: [1000, 'Le message ne peut pas dépasser 1000 caractères.']
     },
+    sourceLang: {
+        type: String,
+        default: 'fr',
+        trim: true,
+        lowercase: true
+    },
+    translations: {
+        type: Map,
+        of: String,
+        default: {}
+    },
     type: {
         type: String,
         enum: ['text', 'image', 'pdf', 'system'],
