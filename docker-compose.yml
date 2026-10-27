@@ -54,6 +54,18 @@ services:
       MONGO_URI: mongodb://mongodb:27017/eco_mentorat
       JWT_SECRET: ${JWT_SECRET:-1e55b8e04f0cbd0b9a5eafbb2c36722a8e2e2046bf000309e2f8ce02dfd63f0184753bace709532f0a6cb497bd24ab74d42ed7255da9819fa69b174e9515e36c}
       CLIENT_URL: http://localhost:8082
+      META_MODEL_API_URL: ${META_MODEL_API_URL:-}
+      META_API_KEY: ${META_API_KEY:-}
+      MUSE_SPARK_API_URL: ${MUSE_SPARK_API_URL:-}
+      MUSE_API_KEY: ${MUSE_API_KEY:-}
+      MUSE_SPARK_MODEL: ${MUSE_SPARK_MODEL:-muse-spark-3}
+      MUSE_SPARK_OPEN_MODEL: ${MUSE_SPARK_OPEN_MODEL:-meta-models/muse-spark-open-1026}
+      MUSE_WONDER_MODEL: ${MUSE_WONDER_MODEL:-muse-wonder}
+      MUSE_TRANSCRIBE_MODEL: ${MUSE_TRANSCRIBE_MODEL:-muse-voice-transcribe}
+      MUSE_TRANSCRIBE_URL: ${MUSE_TRANSCRIBE_URL:-}
+      MUSE_WONDER_URL: ${MUSE_WONDER_URL:-}
+      BASETEN_API_URL: ${BASETEN_API_URL:-}
+      BASETEN_API_KEY: ${BASETEN_API_KEY:-}
     depends_on:
       mongodb:
         condition: service_healthy
