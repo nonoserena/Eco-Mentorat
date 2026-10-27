@@ -44,7 +44,16 @@ class SocketManager {
             socket.on('send_message', async ({ requestId, content, username, userId, time, sourceLang, targetLang }) => {
                 try {
                     const senderId = userId || socket.data?.userId;
-                    const srcLang = TranslateService.normalizeLang(sourceLang, 'fr');
+                    let senderHint = sourceLang || null;
+                    try {
+                        if (!senderHint && senderId) {
+                            const senderDoc = await User.findById(senderId).select('preferredLang').lean();
+                            if (senderDoc) senderHint = senderDoc.preferredLang;
+                        }
+                    } catch {}
+                    const srcLang = TranslateService.detectLanguage
+                        ? TranslateService.detectLanguage(content, senderHint || 'fr')
+                        : TranslateService.normalizeLang(senderHint, 'fr');
                     let savedMsg = null;
                     let skillTag = 'general';
 
