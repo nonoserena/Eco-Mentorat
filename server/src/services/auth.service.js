@@ -8,13 +8,13 @@ const { nettoyerEtRegrouperTag } = require('../utils/tagNormalizer');
 class AuthService {
     static generateToken(user) {
         return jwt.sign(
-            { id: user._id, username: user.username, email: user.email, preferredLang: user.preferredLang || 'fr' },
+            { id: user._id, username: user.username, email: user.email, preferredLang: user.preferredLang || 'fr', country: user.country || 'CM' },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
         );
     }
 
-    static async register({ username, email, password, skillsDeclarated, preferredLang }) {
+    static async register({ username, email, password, skillsDeclarated, preferredLang, country }) {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             throw new AppError('Cet email est déjà associé à un compte.', 409);
@@ -46,11 +46,16 @@ class AuthService {
             });
         }
 
-        const langNorm = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'].includes(String(preferredLang || '').toLowerCase()) ? String(preferredLang).toLowerCase() : 'fr';
+        const COUNTRY_LANG = { CM: 'fr', JP: 'ja', MA: 'ar', BR: 'pt', GB: 'en', ES: 'es', SN: 'wo', CN: 'zh' };
+        const countryNorm = String(country || 'CM').toUpperCase().slice(0, 2);
+        const countryFinal = COUNTRY_LANG[countryNorm] ? countryNorm : 'CM';
+        const langFromCountry = COUNTRY_LANG[countryFinal];
+        const langNorm = ['fr', 'en', 'ja', 'zh', 'wo', 'es', 'ar', 'pt'].includes(String(preferredLang || '').toLowerCase()) ? String(preferredLang).toLowerCase() : langFromCountry;
         const newUser = new User({
             username,
             email,
             password: passwordHash,
+            country: countryFinal,
             preferredLang: langNorm,
             skillsDeclarated: skillsNormalises,
             skillsMetrics: metricsInitiales
@@ -64,6 +69,7 @@ class AuthService {
                 id: newUser._id,
                 username: newUser.username,
                 email: newUser.email,
+                country: newUser.country,
                 preferredLang: newUser.preferredLang,
                 xpPoints: newUser.xpPoints,
                 rankTitle: newUser.rankTitle,

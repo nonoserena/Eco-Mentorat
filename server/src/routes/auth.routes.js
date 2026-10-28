@@ -14,7 +14,8 @@ router.post(
         body('email').isEmail().normalizeEmail().withMessage('Email invalide.'),
         body('password').isLength({ min: 8 }).withMessage('Mot de passe trop court (8 caractères min).'),
         body('skillsDeclarated').optional().isArray(),
-        body('preferredLang').optional().isString().trim().isLength({ min: 2, max: 5 })
+        body('preferredLang').optional().isString().trim().isLength({ min: 2, max: 5 }),
+        body('country').optional().isString().trim().isLength({ min: 2, max: 2 })
     ],
     validate,
     AuthController.register

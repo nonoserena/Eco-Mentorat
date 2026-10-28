@@ -4,19 +4,22 @@ import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { getMyProfile } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 
 const SOCKET_URL = 'http://localhost:5000';
 
-const NAV_ITEMS = [
-    { path: '/home',           icon: '🏠', label: 'Accueil' },
-    { path: '/create-request', icon: '✋', label: "Demander de l'aide" },
-    { path: '/leaderboard',    icon: '🏆', label: 'Classement' },
-    { path: '/history',        icon: '📜', label: 'Historique' },
-    { path: '/profile',        icon: '👤', label: 'Mon Profil' },
+const NAV_KEYS = [
+    { path: '/home', icon: '🏠', key: 'nav.home' },
+    { path: '/create-request', icon: '✋', key: 'nav.create' },
+    { path: '/leaderboard', icon: '🏆', key: 'nav.leaderboard' },
+    { path: '/history', icon: '📜', key: 'nav.history' },
+    { path: '/profile', icon: '👤', key: 'nav.profile' },
 ];
 
 export default function DashboardLayout({ children }) {
+    const { t } = useTranslation();
     const { isDark, toggleTheme } = useTheme();
     const { user, logout, updateUser } = useAuth();
     const location                     = useLocation();
@@ -139,21 +142,21 @@ export default function DashboardLayout({ children }) {
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1">
-                    {NAV_ITEMS.map(item => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                                isActive(item.path)
-                                    ? 'bg-white text-blue-900 shadow-md'
-                                    : 'text-blue-200 hover:bg-blue-800 hover:text-white'
-                            }`}
-                        >
-                            <span className="text-lg">{item.icon}</span>
-                            {item.label}
-                        </Link>
-                    ))}
-                </nav>
+                                    {NAV_KEYS.map(item => (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                                                isActive(item.path)
+                                                    ? 'bg-white text-blue-900 shadow-md'
+                                                    : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                                            }`}
+                                        >
+                                            <span className="text-lg">{item.icon}</span>
+                                            {t(item.key)}
+                                        </Link>
+                                    ))}
+                                </nav>
 
                 <div className="px-4 py-4 border-t border-blue-800">
                     <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-blue-800/50">
@@ -169,7 +172,7 @@ export default function DashboardLayout({ children }) {
                     </div>
                     <div className="mt-3 px-3">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-blue-300 text-xs">XP Total</span>
+                            <span className="text-blue-300 text-xs">{t('profile.totalXp')}</span>
                             <span className="text-white text-xs font-bold">⚡ {user?.xpPoints ?? 0}</span>
                         </div>
                         <div className="w-full bg-blue-800 rounded-full h-1.5">
@@ -194,18 +197,19 @@ export default function DashboardLayout({ children }) {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={handleSearch}
-                            placeholder="Cherche une matière, un problème... (Entrée)"
+                            placeholder={t('common.search')}
                             className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                         />
                     </div>
                     <button
-                     onClick={toggleTheme}
-                     className="w-9 h-9 flex items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition"
-                      title={isDark ? 'Mode clair' : 'Mode sombre'}
-                    >
-                        {isDark ? '☀️' : '🌙'}
-                    </button>
-                    <div className="flex items-center gap-3 ml-auto">
+                                         onClick={toggleTheme}
+                                         className="w-9 h-9 flex items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition"
+                                          title={isDark ? 'Mode clair' : 'Mode sombre'}
+                                        >
+                                            {isDark ? '☀️' : '🌙'}
+                                        </button>
+                                        <LanguageSwitcher compact />
+                                        <div className="flex items-center gap-3 ml-auto">
 
                         {/* Cloche notifications */}
                         <div className="relative">
@@ -290,7 +294,7 @@ export default function DashboardLayout({ children }) {
                             className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-xl transition"
                         >
                             <span>⏻</span>
-                            <span className="hidden sm:block">Déconnexion</span>
+                            <span className="hidden sm:block">{t('nav.logout')}</span>
                         </button>
                     </div>
                 </header>

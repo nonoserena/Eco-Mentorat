@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+
+const COUNTRIES = [
+  { code: 'CM', label: '🇨🇲 Cameroun', lang: 'fr' },
+  { code: 'JP', label: '🇯🇵 Japon (Osaka)', lang: 'ja' },
+  { code: 'MA', label: '🇲🇦 Maroc', lang: 'ar' },
+  { code: 'BR', label: '🇧🇷 Brésil', lang: 'pt' },
+  { code: 'GB', label: '🇬🇧 Royaume-Uni / USA', lang: 'en' },
+  { code: 'ES', label: '🇪🇸 Espagne', lang: 'es' },
+  { code: 'SN', label: '🇸🇳 Sénégal', lang: 'wo' },
+  { code: 'CN', label: '🇨🇳 Chine', lang: 'zh' },
+];
 
 const SKILL_TAGS_OFFICIELS = [
     '#Java', '#Python', '#Réseaux', '#Linux',
@@ -9,13 +22,29 @@ const SKILL_TAGS_OFFICIELS = [
 ];
 
 export default function Register() {
+    const { t, i18n } = useTranslation();
     const { register } = useAuth();
     const navigate     = useNavigate();
 
     const [step, setStep]   = useState(1); // Étape 1 : infos, Étape 2 : compétences
+    const [country, setCountry] = useState('CM');
     const [formData, setFormData] = useState({
             username: '', email: '', password: '', confirmPassword: '', preferredLang: 'fr'
         });
+
+    const handleCountryChange = (code) => {
+        setCountry(code);
+        const found = COUNTRIES.find(c => c.code === code);
+        const lang = found ? found.lang : 'fr';
+        setFormData(f => ({ ...f, preferredLang: lang }));
+        try {
+          localStorage.setItem('eco-lang', lang);
+          i18n.changeLanguage(lang);
+          document.documentElement.lang = lang;
+          document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        } catch {}
+        setError('');
+    };
     const [skillsSelectionnés, setSkillsSelectionnés] = useState([]);
     const [autreSkill, setAutreSkill]                 = useState('');
     const [error, setError]                           = useState('');
@@ -61,12 +90,13 @@ export default function Register() {
         setLoading(true);
         try {
             await register({
-                            username: formData.username,
-                            email: formData.email,
-                            password: formData.password,
-                            skillsDeclarated: skillsSelectionnés,
-                            preferredLang: formData.preferredLang || 'fr'
-                        });
+                                        username: formData.username,
+                                        email: formData.email,
+                                        password: formData.password,
+                                        skillsDeclarated: skillsSelectionnés,
+                                        preferredLang: formData.preferredLang || 'fr',
+                                        country
+                                    });
             navigate('/home');
         } catch (err) {
             setError(err.response?.data?.message || 'Une erreur est survenue.');
@@ -234,14 +264,34 @@ export default function Register() {
                                                                     />
                                                                 </div>
 
-                                                                <div>
-                                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                                                        🌍 Ma langue pays — le feed sera traduit pour moi
-                                                                    </label>
-                                                                    <select
-                                                                        name="preferredLang"
-                                                                        value={formData.preferredLang}
-                                                                        onChange={handleChange}
+                                                                <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+                                                                                                                                    <label className="block text-sm font-bold text-violet-900 mb-1.5">
+                                                                                                                                        🧪 TEST NAVIGATEUR — Choisis ton pays, Eco-Mentorat s'ouvre dans sa langue
+                                                                                                                                    </label>
+                                                                                                                                    <select
+                                                                                                                                        value={country}
+                                                                                                                                        onChange={(e) => handleCountryChange(e.target.value)}
+                                                                                                                                        className="w-full px-4 py-3 border border-violet-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white transition font-semibold"
+                                                                                                                                    >
+                                                                                                                                        {COUNTRIES.map(c => (
+                                                                                                                                          <option key={c.code} value={c.code}>{c.label} → {c.lang.toUpperCase()}</option>
+                                                                                                                                        ))}
+                                                                                                                                    </select>
+                                                                                                                                    <p className="text-xs text-violet-700 mt-2">Pays actuel : <b>{country}</b> → langue <b>{formData.preferredLang}</b> • L'interface bascule en live pour tester.</p>
+                                                                                                                                    <div className="mt-2 flex items-center gap-2">
+                                                                                                                                      <span className="text-xs text-violet-600">Aperçu rapide :</span>
+                                                                                                                                      <LanguageSwitcher compact />
+                                                                                                                                    </div>
+                                                                                                                                </div>
+
+                                                                                                                                <div>
+                                                                                                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                                                                                                        {t('auth.myLanguage')}
+                                                                                                                                    </label>
+                                                                                                                                    <select
+                                                                                                                                        name="preferredLang"
+                                                                                                                                        value={formData.preferredLang}
+                                                                                                                                        onChange={handleChange}
                                                                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition"
                                                                     >
                                                                         <option value="fr">🇫🇷 Français (Cameroun)</option>

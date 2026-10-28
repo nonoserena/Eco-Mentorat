@@ -91,6 +91,13 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    country: {
+        type: String,
+        default: 'CM',
+        enum: ['CM', 'JP', 'MA', 'BR', 'GB', 'ES', 'SN', 'CN'],
+        trim: true,
+        uppercase: true
+    },
     preferredLang: {
         type: String,
         default: 'fr',

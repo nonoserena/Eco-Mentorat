@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import { getRequests, acceptRequest, getMyRequests } from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 export default function Home() {
+    const { t, i18n } = useTranslation();
     const { user }    = useAuth();
     const navigate    = useNavigate();
 
@@ -17,21 +19,21 @@ export default function Home() {
     const pollingRef = useRef(null);
 
     const fetchRequests = async () => {
-            setLoading(true);
-            try {
-                const lang = user?.preferredLang || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
-                const res = await getRequests(page, 10, lang);
-                setRequests(res.data.requests);
-                setTotalPages(res.data.totalPages);
-                setTotal(res.data.total);
-            } catch {
-                setError('Impossible de charger les demandes.');
-            } finally {
-                setLoading(false);
-            }
-        };
+                setLoading(true);
+                try {
+                    const lang = user?.preferredLang || i18n.language || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
+                    const res = await getRequests(page, 10, lang);
+                    setRequests(res.data.requests);
+                    setTotalPages(res.data.totalPages);
+                    setTotal(res.data.total);
+                } catch {
+                    setError(t('home.empty'));
+                } finally {
+                    setLoading(false);
+                }
+            };
 
-        useEffect(() => { fetchRequests(); }, [page, user?.preferredLang]);
+            useEffect(() => { fetchRequests(); }, [page, user?.preferredLang, i18n.language]);
 
     // FIX : Polling utilise getMyRequests pour détecter les demandes in-progress
     useEffect(() => {
@@ -93,38 +95,38 @@ export default function Home() {
     };
 
     const getTimeAgo = (date) => {
-        const diff = Math.floor((Date.now() - new Date(date)) / 1000);
-        if (diff < 60)    return "À l'instant";
-        if (diff < 3600)  return `Il y a ${Math.floor(diff / 60)} min`;
-        if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
-        return `Il y a ${Math.floor(diff / 86400)}j`;
-    };
+            const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+            if (diff < 60)    return t('home.justNow');
+            if (diff < 3600)  return t('home.minutesAgo', { count: Math.floor(diff / 60) });
+            if (diff < 86400) return t('home.hoursAgo', { count: Math.floor(diff / 3600) });
+            return t('home.daysAgo', { count: Math.floor(diff / 86400) });
+        };
 
     return (
         <DashboardLayout>
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Tableau des demandes 📋</h1>
-                    <p className="text-gray-500 text-sm mt-1">
-                        {total} demande{total > 1 ? 's' : ''} en cours — Aide un camarade et gagne des XP !
-                    </p>
-                </div>
-                <button
-                    onClick={() => navigate('/create-request')}
-                    className="bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2"
-                >
-                    ✋ Demander de l'aide
-                </button>
+                                    <h1 className="text-2xl font-bold text-gray-800">{t('home.title')} 📋</h1>
+                                    <p className="text-gray-500 text-sm mt-1">
+                                        {t('home.subtitle', { count: total })}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => navigate('/create-request')}
+                                    className="bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2"
+                                >
+                                    ✋ {t('home.askHelp')}
+                                </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
-                    { icon: '📋', label: 'Demandes actives', value: total },
-                    { icon: '⚡', label: 'Tes XP',           value: `${user?.xpPoints ?? 0} XP` },
-                    { icon: '🎖️', label: 'Ton grade',        value: user?.rankTitle || 'Novice' },
-                ].map((stat, i) => (
+                                    { icon: '📋', label: t('home.activeDemands'), value: total },
+                                    { icon: '⚡', label: t('home.myXp'),           value: `${user?.xpPoints ?? 0} XP` },
+                                    { icon: '🎖️', label: t('home.myRank'),        value: user?.rankTitle || 'Novice' },
+                                ].map((stat, i) => (
                     <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
                             {stat.icon}
@@ -151,18 +153,18 @@ export default function Home() {
             ) : requests.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
                     <p className="text-5xl mb-3">📭</p>
-                    <p className="text-gray-500 font-medium">Aucune demande active pour le moment.</p>
-                    <p className="text-gray-400 text-sm mt-1">Sois le premier à demander de l'aide !</p>
+                    <p className="text-gray-500 font-medium">{t('home.empty')}</p>
+                                        <p className="text-gray-400 text-sm mt-1">{t('home.emptyHint')}</p>
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="grid grid-cols-12 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                         <div className="col-span-1">#</div>
-                        <div className="col-span-4">Demande</div>
-                        <div className="col-span-2">Matière</div>
-                        <div className="col-span-2">Statut</div>
-                        <div className="col-span-2">Publié</div>
-                        <div className="col-span-1 text-right">Action</div>
+                                                <div className="col-span-4">{t('home.request')}</div>
+                                                <div className="col-span-2">{t('home.subject')}</div>
+                                                <div className="col-span-2">{t('home.status')}</div>
+                                                <div className="col-span-2">{t('home.published')}</div>
+                                                <div className="col-span-1 text-right">{t('home.action')}</div>
                     </div>
 
                     {requests.map((req, index) => (
@@ -180,8 +182,8 @@ export default function Home() {
                                                             <p className="text-gray-800 font-semibold text-sm truncate">{req.title_display || req.title}</p>
                                                             <p className="text-gray-400 text-xs mt-0.5 truncate">{req.description_display || req.description}</p>
                                                             {req.title_translated && (
-                                                              <p className="text-[11px] text-violet-600 mt-1">Traduit {req.sourceLang}→{req.viewerLang} via {req.engine} • Original: {req.title_original}</p>
-                                                            )}
+                                                                                                                          <p className="text-[11px] text-violet-600 mt-1">{t('common.translatedVia', { from: req.sourceLang, to: req.viewerLang, engine: req.engine })} • {t('common.original')}: {req.title_original}</p>
+                                                                                                                        )}
                                                         </div>
 
                             <div className="col-span-2">
@@ -193,14 +195,14 @@ export default function Home() {
                             {/* FIX: colonne statut visible */}
                             <div className="col-span-2">
                                 {req.status === 'in-progress' ? (
-                                    <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2.5 py-1 rounded-full">
-                                        🔒 En cours
-                                    </span>
-                                ) : (
-                                    <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full">
-                                        🟢 Ouverte
-                                    </span>
-                                )}
+                                                                    <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2.5 py-1 rounded-full">
+                                                                        🔒 {t('home.inProgress')}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full">
+                                                                        🟢 {t('home.open')}
+                                                                    </span>
+                                                                )}
                             </div>
 
                             <div className="col-span-2 text-gray-400 text-xs">
@@ -212,31 +214,31 @@ export default function Home() {
                                     // FIX: si c'est MA demande in-progress, bouton rejoindre le chat
                                     req.requesterId === user?.id ? (
                                         <button
-                                            onClick={() => navigate(`/chat/${req._id}`)}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                                        >
-                                            Chat 💬
-                                        </button>
-                                    ) : req.mentorId === user?.id ? (
-                                        <button
-                                            onClick={() => navigate(`/chat/${req._id}`)}
-                                            className="bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                                        >
-                                            Chat 💬
-                                        </button>
-                                    ) : (
-                                        <span className="text-xs text-gray-400 italic">Occupée</span>
-                                    )
-                                ) : req.requesterId === user?.id ? (
-                                    <span className="text-xs text-gray-400 italic">Ma demande</span>
-                                ) : (
-                                    <button
-                                        onClick={() => handleAccept(req._id)}
-                                        className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap"
-                                    >
-                                        Aider ✋
-                                    </button>
-                                )}
+                                                                                    onClick={() => navigate(`/chat/${req._id}`)}
+                                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                                                                                >
+                                                                                    {t('home.chat')} 💬
+                                                                                </button>
+                                                                            ) : req.mentorId === user?.id ? (
+                                                                                <button
+                                                                                    onClick={() => navigate(`/chat/${req._id}`)}
+                                                                                    className="bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                                                                                >
+                                                                                    {t('home.chat')} 💬
+                                                                                </button>
+                                                                            ) : (
+                                                                                <span className="text-xs text-gray-400 italic">{t('home.busy')}</span>
+                                                                            )
+                                                                        ) : req.requesterId === user?.id ? (
+                                                                            <span className="text-xs text-gray-400 italic">{t('home.myRequest')}</span>
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={() => handleAccept(req._id)}
+                                                                                className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+                                                                            >
+                                                                                {t('home.help')} ✋
+                                                                            </button>
+                                                                        )}
                             </div>
                         </div>
                     ))}
@@ -251,7 +253,7 @@ export default function Home() {
                         disabled={page === 1}
                         className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                        ← Précédent
+                        ← {t('common.previous')}
                     </button>
                     <span className="text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200">
                         Page {page} / {totalPages}
@@ -261,7 +263,7 @@ export default function Home() {
                         disabled={page === totalPages}
                         className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                        Suivant →
+                        {t('common.next')} →
                     </button>
                 </div>
             )}
