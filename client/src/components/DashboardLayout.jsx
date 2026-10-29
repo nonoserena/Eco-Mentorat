@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
@@ -6,22 +6,25 @@ import { getMyProfile } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import { formatNumber, formatTime, getLocale } from '../utils/format';
 
 
-const SOCKET_URL = 'http://localhost:5000';
+const getSocketURL = () => { if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return window.location.origin; return 'http://localhost:5000'; };
+const SOCKET_URL = getSocketURL();
 
 const NAV_KEYS = [
-    { path: '/home', icon: '🏠', key: 'nav.home' },
-    { path: '/create-request', icon: '✋', key: 'nav.create' },
-    { path: '/leaderboard', icon: '🏆', key: 'nav.leaderboard' },
-    { path: '/history', icon: '📜', key: 'nav.history' },
-    { path: '/profile', icon: '👤', key: 'nav.profile' },
+    { path: '/home', icon: 'ðŸ ', key: 'nav.home' },
+    { path: '/create-request', icon: 'âœ‹', key: 'nav.create' },
+    { path: '/leaderboard', icon: 'ðŸ†', key: 'nav.leaderboard' },
+    { path: '/history', icon: 'ðŸ“œ', key: 'nav.history' },
+    { path: '/profile', icon: 'ðŸ‘¤', key: 'nav.profile' },
 ];
 
 export default function DashboardLayout({ children }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { isDark, toggleTheme } = useTheme();
     const { user, logout, updateUser } = useAuth();
+    const lang = user?.preferredLang || i18n.language || 'fr';
     const location                     = useLocation();
     const navigate                     = useNavigate();
     const socketRef                    = useRef(null);
@@ -43,9 +46,9 @@ export default function DashboardLayout({ children }) {
         const colors = {
             'Novice':   'bg-gray-100 text-gray-600',
             'Apprenti': 'bg-blue-100 text-blue-700',
-            'Confirme': 'bg-green-100 text-green-700',
+            'Confirmé': 'bg-green-100 text-green-700',
             'Expert':   'bg-orange-100 text-orange-700',
-            'Legende':  'bg-purple-100 text-purple-700',
+            'Légende':  'bg-purple-100 text-purple-700',
         };
         return colors[rank] || 'bg-gray-100 text-gray-600';
     };
@@ -63,42 +66,47 @@ export default function DashboardLayout({ children }) {
     });
     socketRef.current = socket;
 
-    // FIX: enregistrer immédiatement ET sur reconnexion
+    // FIX: enregistrer immÃ©diatement ET sur reconnexion
     const registerUser = () => {
         console.log('[SOCKET] Enregistrement user:', user.id);
         socket.emit('register_user', { userId: user.id });
     };
 
     socket.on('connect', () => {
-        console.log('[SOCKET] Connecté:', socket.id);
+        console.log('[SOCKET] ConnectÃ©:', socket.id);
         registerUser();
     });
 
-    // FIX: re-enregistrer après reconnexion
+    // FIX: re-enregistrer aprÃ¨s reconnexion
     socket.on('reconnect', () => {
-        console.log('[SOCKET] Reconnecté');
+        console.log('[SOCKET] ReconnectÃ©');
         registerUser();
     });
 
-    // Recevoir notification nouvelle demande
-    socket.on('new_request', (data) => {
-        console.log('[SOCKET] Notification reçue:', data);
-        const newNotif = {
-            id:        Date.now(),
-            message:   data.message,
-            skillTag:  data.skillTag,
-            requestId: data.id,
-            title:     data.title,
-            time:      new Date().toLocaleTimeString('fr-FR', {
-                hour: '2-digit', minute: '2-digit'
-            }),
-            read: false
-        };
-        setNotifications(prev => [newNotif, ...prev].slice(0, 10));
-        setUnreadCount(prev => prev + 1);
-    });
+    // Recevoir notification nouvelle demande + feed temps rÃ©el sans refresh
+        socket.on('new_request', (data) => {
+            console.log('[SOCKET] Notification reÃ§ue:', data);
+            const myLang = (user?.preferredLang || i18n.language || 'fr').slice(0,2);
+            const newNotif = {
+                id:        Date.now(),
+                message:   data.message,
+                skillTag:  data.skillTag,
+                requestId: data.id,
+                title:     data.title,
+                time:      formatTime(new Date(), myLang),
+                read: false
+            };
+            setNotifications(prev => [newNotif, ...prev].slice(0, 10));
+            setUnreadCount(prev => prev + 1);
+        });
+        socket.on('feed_new_request', () => {
+            try { window.dispatchEvent(new CustomEvent('eco-feed-refresh')); } catch {}
+        });
+        socket.on('feed_updated', () => {
+            try { window.dispatchEvent(new CustomEvent('eco-feed-refresh')); } catch {}
+        });
 
-    // Rafraîchir profil toutes les 30 secondes
+    // RafraÃ®chir profil toutes les 30 secondes
     const refreshProfile = async () => {
         try {
             const res = await getMyProfile();
@@ -138,7 +146,7 @@ export default function DashboardLayout({ children }) {
             <aside className="w-64 min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col fixed left-0 top-0 z-40 shadow-xl">
                 <div className="px-6 py-6 border-b border-blue-800">
                     <h1 className="text-xl font-bold text-white">Eco-Mentorat</h1>
-                    <p className="text-blue-300 text-xs mt-0.5">Entraide académique</p>
+                    <p className="text-blue-300 text-xs mt-0.5">{t('dashboard.tagline')}</p>
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1">
@@ -173,7 +181,7 @@ export default function DashboardLayout({ children }) {
                     <div className="mt-3 px-3">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-blue-300 text-xs">{t('profile.totalXp')}</span>
-                            <span className="text-white text-xs font-bold">⚡ {user?.xpPoints ?? 0}</span>
+                            <span className="text-white text-xs font-bold">âš¡ {formatNumber(user?.xpPoints ?? 0, lang)}</span>
                         </div>
                         <div className="w-full bg-blue-800 rounded-full h-1.5">
                             <div
@@ -191,7 +199,7 @@ export default function DashboardLayout({ children }) {
                 {/* HEADER */}
                 <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 sticky top-0 z-30 shadow-sm">
                     <div className="flex-1 max-w-lg relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ðŸ”</span>
                         <input
                             type="text"
                             value={searchQuery}
@@ -206,7 +214,7 @@ export default function DashboardLayout({ children }) {
                                          className="w-9 h-9 flex items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition"
                                           title={isDark ? 'Mode clair' : 'Mode sombre'}
                                         >
-                                            {isDark ? '☀️' : '🌙'}
+                                            {isDark ? 'â˜€ï¸' : 'ðŸŒ™'}
                                         </button>
                                         <LanguageSwitcher compact />
                                         <div className="flex items-center gap-3 ml-auto">
@@ -217,7 +225,7 @@ export default function DashboardLayout({ children }) {
                                 onClick={() => setShowNotifs(!showNotifs)}
                                 className="relative w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-xl transition"
                             >
-                                <span className="text-lg">🔔</span>
+                                <span className="text-lg">ðŸ””</span>
                                 {unreadCount > 0 && (
                                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -229,22 +237,22 @@ export default function DashboardLayout({ children }) {
                             {showNotifs && (
                                 <div className="absolute right-0 top-11 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                                        <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
-                                        {notifications.length > 0 && (
-                                            <button
-                                                onClick={clearNotifs}
-                                                className="text-xs text-gray-400 hover:text-gray-600"
-                                            >
-                                                Tout effacer
-                                            </button>
-                                        )}
+                                        <h3 className="font-semibold text-gray-800 text-sm">{t('dashboard.notifications')}</h3>
+                                                                                {notifications.length > 0 && (
+                                                                                    <button
+                                                                                        onClick={clearNotifs}
+                                                                                        className="text-xs text-gray-400 hover:text-gray-600"
+                                                                                    >
+                                                                                        {t('dashboard.clearAll')}
+                                                                                    </button>
+                                                                                )}
                                     </div>
 
                                     {notifications.length === 0 ? (
                                         <div className="py-8 text-center text-gray-400 text-sm">
-                                            <p className="text-2xl mb-2">🔕</p>
-                                            <p>Aucune notification</p>
-                                        </div>
+                                                                                    <p className="text-2xl mb-2">ðŸ”•</p>
+                                                                                    <p>{t('dashboard.noNotif')}</p>
+                                                                                </div>
                                     ) : (
                                         <div className="max-h-64 overflow-y-auto">
                                             {notifications.map(notif => (
@@ -256,7 +264,7 @@ export default function DashboardLayout({ children }) {
                                                     }`}
                                                 >
                                                     <div className="flex items-start gap-3">
-                                                        <span className="text-lg mt-0.5">🔔</span>
+                                                        <span className="text-lg mt-0.5">ðŸ””</span>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-medium text-gray-800 truncate">
                                                                 {notif.message}
@@ -293,7 +301,7 @@ export default function DashboardLayout({ children }) {
                             onClick={logout}
                             className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-xl transition"
                         >
-                            <span>⏻</span>
+                            <span>â»</span>
                             <span className="hidden sm:block">{t('nav.logout')}</span>
                         </button>
                     </div>
