@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Icon from './Icon';
 
 export default function Navbar() {
     const { user, logout } = useAuth();
@@ -28,8 +29,9 @@ export default function Navbar() {
 
                 {/* User + Logout */}
                 <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600 font-medium">
-                        👤 {user?.username}
+                    <span className="text-sm text-gray-600 font-medium inline-flex items-center gap-1.5">
+                        <Icon name="user" size={14} />
+                        {user?.username}
                     </span>
                     <button
                         onClick={logout}

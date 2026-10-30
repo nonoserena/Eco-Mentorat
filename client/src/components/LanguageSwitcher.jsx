@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next';
+import Icon from './Icon';
 
 const LANGS = [
-  { code: 'fr', label: '🇫🇷 Français' },
-  { code: 'ja', label: '🇯🇵 日本語' },
-  { code: 'ar', label: '🇲🇦 العربية' },
-  { code: 'pt', label: '🇧🇷 Português' },
-  { code: 'en', label: '🇬🇧 English' },
-  { code: 'es', label: '🇪🇸 Español' },
-  { code: 'wo', label: '🇸🇳 Wolof' },
-  { code: 'zh', label: '🇨🇳 中文' },
+  { code: 'fr', label: 'Français' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'pt', label: 'Português' },
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'wo', label: 'Wolof' },
+  { code: 'zh', label: '中文' },
 ];
 
 export default function LanguageSwitcher({ compact = false }) {
@@ -21,21 +22,32 @@ export default function LanguageSwitcher({ compact = false }) {
       i18n.changeLanguage(code);
       document.documentElement.lang = code;
       document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
-    } catch {}
+    } catch { /* stockage indisponible : on ignore */ }
   };
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? '' : 'w-full'}`} title={t('common.language')}>
-      <span className="text-sm">🌍</span>
+    <label
+      title={t('common.language')}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        width: compact ? 'auto' : '100%', color: 'var(--muted)',
+      }}
+    >
+      <Icon name="globe" size={16} />
       <select
         value={current}
         onChange={(e) => change(e.target.value)}
-        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-400"
+        aria-label={t('common.language')}
+        style={{
+          fontSize: 13, fontFamily: 'inherit', padding: '7px 8px',
+          border: '1px solid var(--border)', borderRadius: 6,
+          background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer',
+        }}
       >
         {LANGS.map((l) => (
           <option key={l.code} value={l.code}>{l.label}</option>
         ))}
       </select>
-    </div>
+    </label>
   );
 }

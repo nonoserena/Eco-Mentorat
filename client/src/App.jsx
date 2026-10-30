@@ -10,6 +10,7 @@ import CreateRequest from './pages/dashboard/CreateRequest';
 import Leaderboard   from './pages/dashboard/LeaderBoard';
 import History       from './pages/dashboard/History';
 import Profile       from './pages/profile/Profile';
+import PublicProfile from './pages/profile/PublicProfile';
 import Chat          from './pages/chat/Chat';
 
 const ProtectedRoute = ({ children }) => {
@@ -27,6 +28,9 @@ const AppRoutes = () => {
         <Routes>
             {/* Landing page */}
             <Route path="/"         element={<Landing />} />
+
+            {/* Profil public vérifié pour recruteurs et CV */}
+            <Route path="/u/:username" element={<PublicProfile />} />
 
             {/* Routes publiques */}
             <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
@@ -50,7 +54,7 @@ export default function App() {
         <BrowserRouter>
             <ThemeProvider>
                 <AuthProvider>
-                    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+                    <div className="min-h-screen" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
                         <AppRoutes />
                     </div>
                 </AuthProvider>

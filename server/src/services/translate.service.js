@@ -1,4 +1,4 @@
-// Muse Spark series — Traduction universelle hackathon (Meta Model API $150)
+// Muse Spark series — Traduction universelle hackathon (Meta Model API)
 // Texte uniquement (<1Ko/message), cache low-data Afrique-first + fallback offline jury.
 const Muse = require('./muse.service');
 

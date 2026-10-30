@@ -91,6 +91,10 @@ const ICONS = {
     <polyline points="15 18 9 12 15 6" />
   ),
 
+  check: (
+    <polyline points="20 6 9 17 4 12" />
+  ),
+
   'chevron-right': (
     <polyline points="9 18 15 12 9 6" />
   ),
@@ -213,6 +217,15 @@ const ICONS = {
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </>
   ),
+
+  book: (
+    <>
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+      <path d="M6 6h10" />
+      <path d="M6 10h10" />
+    </>
+  ),
+
 };
 
 /**

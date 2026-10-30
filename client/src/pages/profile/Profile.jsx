@@ -1,362 +1,423 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '../../utils/format';
 import { getPortfolio, getMyProfile, updateMyLang } from '../../services/api';
+import Icon from '../../components/Icon';
 
-const getRankStyle = (rank) => {
-    const styles = {
-        'Novice':   { bg: 'bg-gray-100',   text: 'text-gray-600',   bar: 'bg-gray-400' },
-        'Apprenti': { bg: 'bg-blue-100',   text: 'text-blue-700',   bar: 'bg-blue-500' },
-        'Confirmé':  { bg: 'bg-green-100',  text: 'text-green-700',  bar: 'bg-green-500' },
-        'Expert':   { bg: 'bg-orange-100', text: 'text-orange-700', bar: 'bg-orange-500' },
-        'Légende':   { bg: 'bg-purple-100', text: 'text-purple-700', bar: 'bg-purple-500' },
-    };
-    return styles[rank] || styles['Novice'];
+const RANK_MILESTONES = [
+  { title: 'Novice', xp: 0 },
+  { title: 'Apprenti', xp: 200 },
+  { title: 'Confirmé', xp: 800 },
+  { title: 'Expert', xp: 2000 },
+  { title: 'Légende', xp: 5000 },
+];
+
+const getRankBadgeClass = (rankTitle) => {
+  const map = {
+    Novice: 'grade-novice',
+    Apprenti: 'grade-apprenti',
+    Confirmé: 'grade-confirme',
+    Confirme: 'grade-confirme',
+    Expert: 'grade-expert',
+    Légende: 'grade-legende',
+    Legende: 'grade-legende',
+  };
+  return map[rankTitle] || 'grade-novice';
 };
 
 const getXPProgress = (xp) => {
-    const thresholds     = [0, 200, 800, 2000, 5000];
-    const nextThresholds = [200, 800, 2000, 5000, 10000];
-    let level = 0;
-    for (let i = thresholds.length - 1; i >= 0; i--) {
-        if (xp >= thresholds[i]) { level = i; break; }
+  const thresholds = [0, 200, 800, 2000, 5000];
+  const nextThresholds = [200, 800, 2000, 5000, 5000];
+  let level = 0;
+  for (let i = thresholds.length - 1; i >= 0; i--) {
+    if (xp >= thresholds[i]) {
+      level = i;
+      break;
     }
-    const current = thresholds[level];
-    const next    = nextThresholds[level];
-    return Math.min(100, Math.round(((xp - current) / (next - current)) * 100));
+  }
+  if (level === thresholds.length - 1) {
+    return { percent: 100, current: 5000, next: 5000, isMax: true };
+  }
+  const current = thresholds[level];
+  const next = nextThresholds[level];
+  const percent = Math.min(100, Math.round(((xp - current) / (next - current)) * 100));
+  return { percent, current, next, isMax: false };
 };
 
-const RANK_MILESTONES = [
-    { title: 'Novice',   xp: 0,    emoji: '🌱' },
-    { title: 'Apprenti', xp: 200,  emoji: '📚' },
-    { title: 'Confirme', xp: 800,  emoji: '💡' },
-    { title: 'Expert',   xp: 2000, emoji: '🏆' },
-    { title: 'Legende',  xp: 5000, emoji: '🌟' },
-];
-
-const TAG_COLORS = {
-    '#java':          'bg-orange-100 text-orange-700',
-    '#reseau':        'bg-blue-100 text-blue-700',
-    '#linux':         'bg-green-100 text-green-700',
-    '#python':        'bg-yellow-100 text-yellow-700',
-    '#droit':         'bg-purple-100 text-purple-700',
-    '#web':           'bg-pink-100 text-pink-700',
-    '#mathematiques': 'bg-red-100 text-red-700',
-    '#physique':      'bg-cyan-100 text-cyan-700',
+const TAG_STYLES = {
+  '#java': 'chip tone-blue',
+  '#reseau': 'chip tone-violet',
+  '#linux': 'chip tone-green',
+  '#python': 'chip tone-blue',
+  '#droit': 'chip tone-violet',
+  '#web': 'chip tone-green',
+  '#mathematiques': 'chip tone-blue',
+  '#physique': 'chip tone-violet',
 };
 
 export default function Profile() {
-    const { t, i18n } = useTranslation();
-    const { user, updateUser }      = useAuth();
-    const [downloading, setDownloading] = useState(false);
-    const [freshData, setFreshData] = useState(null);
-    const [loading, setLoading]     = useState(true);
+  const { t, i18n } = useTranslation();
+  const { user, updateUser } = useAuth();
+  const [downloading, setDownloading] = useState(false);
+  const [freshData, setFreshData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
-    const rankStyle  = getRankStyle(user?.rankTitle);
-    const xpProgress = getXPProgress(user?.xpPoints ?? 0);
-
-    // FIX: charger les données fraîches du profil au montage
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const res = await getMyProfile();
-                setFreshData(res.data.user);
-                updateUser(res.data.user);
-            } catch (err) {
-                console.error('Erreur chargement profil:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProfile();
-    }, []);
-
-    const profileData = freshData || user;
-    const lang = (profileData?.preferredLang || user?.preferredLang || i18n.language || 'fr').slice(0,2);
-
-    const handleDownloadPDF = async () => {
-        setDownloading(true);
-        try {
-            const res  = await getPortfolio(user.id);
-            const url  = window.URL.createObjectURL(new Blob([res.data]));
-            const link = document.createElement('a');
-            link.href  = url;
-            link.setAttribute('download', `Portfolio_EcoMentorat_${user.username}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch {
-                    alert(t('profile.downloadErr'));
-                } finally {
-            setDownloading(false);
-        }
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await getMyProfile();
+        setFreshData(res.data.user);
+        updateUser(res.data.user);
+      } catch (err) {
+        console.error('Erreur chargement profil:', err);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchProfile();
+  }, []);
 
-    const getReputationColor = (score) => {
-        if (score >= 4.5) return 'text-green-600';
-        if (score >= 3.5) return 'text-blue-600';
-        if (score >= 2.5) return 'text-yellow-600';
-        return 'text-red-500';
-    };
+  const profileData = freshData || user;
+  const lang = (profileData?.preferredLang || user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+  const rankClass = getRankBadgeClass(profileData?.rankTitle);
+  const xpInfo = getXPProgress(profileData?.xpPoints ?? 0);
 
-    const getReputationBar = (score) => {
-        if (score >= 4.5) return 'bg-green-500';
-        if (score >= 3.5) return 'bg-blue-500';
-        if (score >= 2.5) return 'bg-yellow-500';
-        return 'bg-red-500';
-    };
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      const res = await getPortfolio(user.id);
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Portfolio_EcoMentorat_${user.username}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert(t('profile.downloadErr'));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
-    return (
-        <DashboardLayout>
-            <div className="max-w-4xl mx-auto">
+  const handleCopyPublicLink = () => {
+    const publicUrl = `${window.location.origin}/u/${profileData?.username}`;
+    navigator.clipboard.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
-                {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">{t('profile.title')} 👤</h1>
-                    <p className="text-gray-500 text-sm mt-1">{t('profile.subtitle')}</p>
+  const handleLangChange = async (e) => {
+    const newLang = e.target.value;
+    try {
+      const res = await updateMyLang(newLang);
+      updateUser(res.data.user);
+      setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang }));
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...stored, preferredLang: res.data.user.preferredLang }));
+    } catch {
+      alert(t('profile.langErr'));
+    }
+  };
+
+  return (
+    <DashboardLayout>
+      <div style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+        {/* Titre de page */}
+        <div style={{ marginBottom: '24px' }}>
+          <h1 className="page-title">{t('profile.title')}</h1>
+          <p className="page-sub">{t('profile.subtitle')}</p>
+        </div>
+
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+            <div className="spinner" style={{ width: '32px', height: '32px', color: 'var(--primary)' }} />
+          </div>
+        ) : (
+          <>
+            {/* Carte d'identité principale */}
+            <div className="profile-hero">
+              <div className="profile-avatar">
+                {profileData?.username?.charAt(0).toUpperCase()}
+              </div>
+
+              <div className="profile-info">
+                <div className="profile-header-row">
+                  <span className="profile-name">{profileData?.username}</span>
+                  <span className={`badge ${rankClass}`} style={{ fontSize: '11px', textTransform: 'uppercase' }}>
+                    {profileData?.rankTitle || 'Novice'}
+                  </span>
+                </div>
+                <div className="profile-email">{profileData?.email}</div>
+
+                {/* Sélecteur de langue académique */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                    {t('profile.countryLang')}
+                  </span>
+                  <select
+                    value={profileData?.preferredLang || 'fr'}
+                    onChange={handleLangChange}
+                    className="input"
+                    style={{ padding: '4px 10px', fontSize: '12px', width: 'auto' }}
+                  >
+                    <option value="fr">Français (FR)</option>
+                    <option value="en">English (EN)</option>
+                    <option value="ja">日本語 (JA)</option>
+                    <option value="ar">العربية (AR)</option>
+                    <option value="pt">Português (PT)</option>
+                    <option value="es">Español (ES)</option>
+                    <option value="wo">Wolof (WO)</option>
+                    <option value="zh">中文 (ZH)</option>
+                  </select>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', opacity: 0.8 }}>
+                    {t('profile.feedAuto')}
+                  </span>
                 </div>
 
-                {loading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="w-8 h-8 border-4 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                ) : (
-                    <>
-                        {/* Carte profil principale */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5">
-                            <div className="flex items-center gap-6">
-                                <div className="relative flex-shrink-0">
-                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-900 to-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-md">
-                                        {profileData?.username?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm ${rankStyle.bg} shadow-sm border-2 border-white`}>
-                                        {RANK_MILESTONES.find(r => r.title === profileData?.rankTitle)?.emoji || '🌱'}
-                                    </div>
-                                </div>
+                {/* Progression XP */}
+                <div className="xp-box">
+                  <div className="xp-meta">
+                    <span style={{ color: 'var(--muted)' }}>
+                      {xpInfo.isMax ? t('profile.currentRank') : t('profile.xpProgress')}
+                    </span>
+                    <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
+                      {formatNumber(profileData?.xpPoints ?? 0, lang)} XP
+                      {!xpInfo.isMax && ` / ${formatNumber(xpInfo.next, lang)} XP (${xpInfo.percent}%)`}
+                    </span>
+                  </div>
+                  <div className="xp-bar-bg">
+                    <div className="xp-bar-fill" style={{ width: `${xpInfo.percent}%` }} />
+                  </div>
+                </div>
+              </div>
 
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <h2 className="text-xl font-bold text-gray-800">{profileData?.username}</h2>
-                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${rankStyle.bg} ${rankStyle.text}`}>
-                                            {profileData?.rankTitle || 'Novice'}
-                                        </span>
-                                    </div>
-                                    <p className="text-gray-500 text-sm mb-3">{profileData?.email}</p>
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <span className="text-xs text-gray-500">🌍 {t('profile.countryLang')}</span>
-                                      <select value={profileData?.preferredLang || 'fr'} onChange={async (e) => { try { const res = await updateMyLang(e.target.value); updateUser(res.data.user); setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang })); localStorage.setItem('user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('user') || '{}')), preferredLang: res.data.user.preferredLang })); } catch { alert(t('profile.langErr')); } }} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                                        <option value="fr">FR Francais</option>
-                                        <option value="ja">JA Japonais</option>
-                                        <option value="ar">AR Arabe</option>
-                                        <option value="pt">PT Portugues</option>
-                                        <option value="en">EN English</option>
-                                        <option value="es">ES Espanol</option>
-                                        <option value="wo">WO Wolof</option>
-                                        <option value="zh">ZH Chinois</option>
-                                      </select>
-                                      <span className="text-[11px] text-gray-400">{t('profile.feedAuto')}</span>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-xs text-gray-500">{t('profile.xpProgress')}</span>
-                                            <span className="text-xs font-bold text-blue-900">⚡ {formatNumber(profileData?.xpPoints ?? 0, lang)} XP</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-2">
-                                            <div
-                                                className={`h-2 rounded-full transition-all ${rankStyle.bar}`}
-                                                style={{ width: `${xpProgress}%` }}
-                                            ></div>
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-1">{xpProgress}% {t('profile.towardsNext')}</p>
-                                    </div>
-                                </div>
+              <div className="profile-actions">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="btn btn-primary"
+                  style={{ gap: '8px', padding: '10px 18px', fontSize: '13px' }}
+                >
+                  <Icon name="file-text" size={15} />
+                  <span>{downloading ? t('profile.generating') : t('profile.portfolio')}</span>
+                </button>
 
-                                <button
-                                    onClick={handleDownloadPDF}
-                                    disabled={downloading}
-                                    className="flex-shrink-0 flex flex-col items-center gap-1 bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white px-5 py-3 rounded-xl transition shadow-md disabled:opacity-60"
-                                >
-                                    <span className="text-xl">📄</span>
-                                    <span className="text-xs font-semibold whitespace-nowrap">
-                                        {downloading ? t('profile.generating') : t('profile.portfolio')}
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="grid grid-cols-3 gap-4 mb-5">
-                            {[
-                                { icon: '⚡', label: t('profile.xpTotal'),     value: formatNumber(profileData?.xpPoints ?? 0, lang), sub: t('profile.xpSub') },
-                                { icon: '🧠', label: t('profile.skillsLabel'),  value: formatNumber(profileData?.skillsDeclarated?.length ?? 0, lang), sub: t('profile.skillsSub') },
-                                                                { icon: '🎖️', label: t('profile.rankLabel'), value: profileData?.rankTitle || 'Novice',          sub: t('profile.rankSub') },
-                            ].map((stat, i) => (
-                                <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">{stat.icon}</div>
-                                        <span className="text-xs text-gray-500 font-medium">{stat.label}</span>
-                                    </div>
-                                    <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-5 mb-5">
-                            {/* Compétences */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-4">{t('profile.myPowers')} 🦸</h3>
-                                {profileData?.skillsDeclarated?.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {profileData.skillsDeclarated.map(skill => (
-                                            <span
-                                                key={skill}
-                                                className={`text-xs font-semibold px-3 py-1.5 rounded-full ${TAG_COLORS[skill] || 'bg-gray-100 text-gray-700'}`}
-                                            >
-                                                {skill}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-400 text-sm">{t('profile.noSkill')}</p>
-                                )}
-                            </div>
-
-                            {/* {t('profile.rankJourney')} */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-4">{t('profile.rankJourney')} 🎯</h3>
-                                <div className="space-y-3">
-                                    {RANK_MILESTONES.map((milestone, i) => {
-                                        const reached  = (profileData?.xpPoints ?? 0) >= milestone.xp;
-                                        const current  = profileData?.rankTitle === milestone.title;
-                                        return (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
-                                                    reached ? 'bg-gradient-to-br from-blue-900 to-violet-600' : 'bg-gray-100'
-                                                }`}>
-                                                    <span>{milestone.emoji}</span>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className={`text-sm font-medium ${reached ? 'text-gray-800' : 'text-gray-400'}`}>
-                                                            {milestone.title}
-                                                            {current && (
-                                                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                                                    Actuel
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                        <span className="text-xs text-gray-400">{milestone.xp} XP</span>
-                                                    </div>
-                                                </div>
-                                                {reached && <span className="text-green-500 text-sm">✓</span>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* âœ… NOUVELLE SECTION : Réputation par matière */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                            <h3 className="text-base font-semibold text-gray-800 mb-1">
-                                {t('profile.reputation')} ⭐
-                            </h3>
-                            <p className="text-gray-400 text-xs mb-5">
-                                {t('profile.repHint')}
-                            </p>
-
-                            {!profileData?.skillsMetrics || profileData.skillsMetrics.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <p className="text-3xl mb-2">🎓</p>
-                                    <p className="text-gray-400 text-sm">
-                                        {t('profile.noSession')}
-                                    </p>
-                                    <p className="text-gray-300 text-xs mt-1">
-                                        {t('profile.helpFriend')}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {profileData.skillsMetrics.map((metric, i) => {
-                                        const sessionsReelles = metric.helpCount - 1;
-                                        const tauxSerieux     = metric.acceptedCount > 0
-                                            ? Math.round((metric.helpCount / metric.acceptedCount) * 100)
-                                            : 0;
-
-                                        return (
-                                            <div key={i} className="border border-gray-100 rounded-xl p-4">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${TAG_COLORS[metric.skillTag] || 'bg-gray-100 text-gray-700'}`}>
-                                                            {metric.skillTag}
-                                                        </span>
-                                                        <span className="text-gray-400 text-xs">
-                                                            {sessionsReelles} session{sessionsReelles > 1 ? 's' : ''} complétée{sessionsReelles > 1 ? 's' : ''}
-                                                        </span>
-                                                    </div>
-                                                    <span className={`text-xl font-bold ${getReputationColor(metric.reputationScore)}`}>
-                                                        {metric.reputationScore}/5
-                                                    </span>
-                                                </div>
-
-                                                {/* Barre de réputation globale */}
-                                                <div className="mb-3">
-                                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                        <span>{t('profile.repScore')}</span>
-                                                        <span>{metric.reputationScore}/5.0</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-2">
-                                                        <div
-                                                            className={`h-2 rounded-full transition-all ${getReputationBar(metric.reputationScore)}`}
-                                                            style={{ width: `${(metric.reputationScore / 5) * 100}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Détails des 3 facteurs */}
-                                                <div className="grid grid-cols-3 gap-3 mt-3">
-                                                    {/* Pédagogie */}
-                                                    <div className="text-center bg-blue-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">🎯 Pédagogie</p>
-                                                        <p className="text-sm font-bold text-blue-700">
-                                                            {metric.helpCount > 0
-                                                                ? (metric.totalStars / metric.helpCount).toFixed(1)
-                                                                : '5.0'}/5
-                                                        </p>
-                                                        <p className="text-xs text-gray-400">20%</p>
-                                                    </div>
-
-                                                    {/* Sérieux */}
-                                                    <div className="text-center bg-green-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">💪 Sérieux</p>
-                                                        <p className="text-sm font-bold text-green-700">
-                                                            {tauxSerieux}%
-                                                        </p>
-                                                        <p className="text-xs text-gray-400">60%</p>
-                                                    </div>
-
-                                                    {/* Diversité */}
-                                                    <div className="text-center bg-purple-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">🤝 Diversité</p>
-                                                        <p className="text-sm font-bold text-purple-700">
-                                                            {metric.uniqueUsersHelped?.length ?? 0} étud.
-                                                        </p>
-                                                        <p className="text-xs text-gray-400">20%</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                <button
+                  onClick={handleCopyPublicLink}
+                  className="btn btn-outline"
+                  style={{ gap: '8px', padding: '9px 18px', fontSize: '13px' }}
+                  title="Partager un lien vérifiable avec des recruteurs"
+                >
+                  <Icon name={copied ? 'check' : 'user'} size={15} />
+                  <span>{copied ? 'Lien public copié !' : 'Lien public recruteur'}</span>
+                </button>
+              </div>
             </div>
-        </DashboardLayout>
-    );
+
+            {/* 3 Métriques clés */}
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-top">
+                  <Icon name="award" size={16} />
+                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {t('profile.xpTotal')}
+                  </span>
+                </div>
+                <div className="stat-val">{formatNumber(profileData?.xpPoints ?? 0, lang)} XP</div>
+                <div className="stat-sub">{t('profile.xpSub')}</div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-top">
+                  <Icon name="book" size={16} />
+                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {t('profile.skillsLabel')}
+                  </span>
+                </div>
+                <div className="stat-val">{formatNumber(profileData?.skillsDeclarated?.length ?? 0, lang)}</div>
+                <div className="stat-sub">{t('profile.skillsSub')}</div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-top">
+                  <Icon name="trophy" size={16} />
+                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {t('profile.rankLabel')}
+                  </span>
+                </div>
+                <div className="stat-val">{profileData?.rankTitle || 'Novice'}</div>
+                <div className="stat-sub">{t('profile.rankSub')}</div>
+              </div>
+            </div>
+
+            {/* Deux colonnes : Compétences déclarées & Parcours des grades */}
+            <div className="two-cols">
+              {/* Compétences déclarées */}
+              <div className="card-box">
+                <h2 className="card-title">{t('profile.myPowers')}</h2>
+                {profileData?.skillsDeclarated?.length > 0 ? (
+                  <div className="chips">
+                    {profileData.skillsDeclarated.map((skill) => (
+                      <span key={skill} className={TAG_STYLES[skill] || 'chip'}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
+                    {t('profile.noSkill')}
+                  </p>
+                )}
+                <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '16px', lineHeight: 1.5 }}>
+                  Les alertes d'entraide prioritaires vous sont envoyées pour ces matières.
+                </p>
+              </div>
+
+              {/* Parcours des 5 grades */}
+              <div className="card-box">
+                <h2 className="card-title">{t('profile.rankJourney')}</h2>
+                <div>
+                  {RANK_MILESTONES.map((milestone) => {
+                    const reached = (profileData?.xpPoints ?? 0) >= milestone.xp;
+                    const isCurrent = profileData?.rankTitle === milestone.title;
+                    return (
+                      <div key={milestone.title} className="milestone-item">
+                        <div
+                          className={`milestone-dot ${isCurrent ? 'current' : reached ? 'done' : 'todo'}`}
+                        >
+                          {isCurrent ? '•' : reached ? <Icon name="check" size={13} strokeWidth={2.5} /> : ''}
+                        </div>
+                        <div style={{ flex: 1, fontSize: '13px', fontWeight: isCurrent ? '700' : '500', color: isCurrent ? 'var(--primary)' : 'inherit' }}>
+                          {milestone.title}
+                          {isCurrent && (
+                            <span
+                              className={`badge ${rankClass}`}
+                              style={{ marginInlineStart: '8px', fontSize: '10px' }}
+                            >
+                              {t('profile.current')}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                          {formatNumber(milestone.xp, lang)} XP
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Réputation multidimensionnelle par matière */}
+            <div className="rep-box">
+              <h2 className="card-title" style={{ marginBottom: '4px' }}>
+                {t('profile.reputation')}
+              </h2>
+              <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>
+                {t('profile.repHint')}
+              </p>
+
+              {!profileData?.skillsMetrics || profileData.skillsMetrics.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    background: 'var(--surface-alt)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      background: 'var(--surface)',
+                      color: 'var(--muted)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <Icon name="award" size={20} />
+                  </div>
+                  <p style={{ color: 'var(--text)', fontSize: '13px', fontWeight: '600' }}>
+                    {t('profile.noSession')}
+                  </p>
+                  <p style={{ color: 'var(--muted)', fontSize: '12px', marginTop: '4px' }}>
+                    {t('profile.helpFriend')}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {profileData.skillsMetrics.map((metric, i) => {
+                    const sessionsDone = metric.helpCount || 0;
+                    const seriousRate = metric.acceptedCount > 0
+                      ? Math.round((metric.helpCount / metric.acceptedCount) * 100)
+                      : 0;
+                    const pedagogyRate = metric.helpCount > 0
+                      ? (metric.totalStars / metric.helpCount).toFixed(1)
+                      : '5.0';
+                    const repPercent = Math.min(100, Math.round(((metric.reputationScore || 0) / 5) * 100));
+
+                    return (
+                      <div key={i} className="rep-card">
+                        <div className="rep-header">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className={TAG_STYLES[metric.skillTag] || 'chip'}>
+                              {metric.skillTag}
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                              {sessionsDone} {t('profile.sessionsDone')}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '17px', fontWeight: '800', color: 'var(--primary)' }}>
+                            {formatNumber(metric.reputationScore, lang)} / 5.0
+                          </div>
+                        </div>
+
+                        {/* Barre de réputation */}
+                        <div className="xp-bar-bg" style={{ height: '6px' }}>
+                          <div className="xp-bar-fill" style={{ width: `${repPercent}%` }} />
+                        </div>
+
+                        {/* 3 Facteurs certifiés */}
+                        <div className="rep-factors">
+                          <div className="factor-item">
+                            <div className="factor-label">{t('chat.rep1').split(':')[0]}</div>
+                            <div className="factor-val">{pedagogyRate} / 5</div>
+                            <div className="factor-weight">Pondération 20%</div>
+                          </div>
+
+                          <div className="factor-item">
+                            <div className="factor-label">{t('chat.rep2').split(':')[0]}</div>
+                            <div className="factor-val">{seriousRate}%</div>
+                            <div className="factor-weight">Pondération 60%</div>
+                          </div>
+
+                          <div className="factor-item">
+                            <div className="factor-label">{t('chat.rep3').split(':')[0]}</div>
+                            <div className="factor-val">
+                              {metric.uniqueUsersHelped?.length ?? 0} {t('profile.students')}
+                            </div>
+                            <div className="factor-weight">Pondération 20%</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </DashboardLayout>
+  );
 }

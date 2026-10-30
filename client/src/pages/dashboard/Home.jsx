@@ -4,293 +4,270 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import { getRequests, acceptRequest, getMyRequests } from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import Icon from '../../components/Icon';
 import { formatNumber } from '../../utils/format';
 
-const getSocketURL = () => {
-  if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return window.location.origin;
-  return 'http://localhost:5000';
-};
-
 export default function Home() {
-    const { t, i18n } = useTranslation();
-    const { user }    = useAuth();
-    const navigate    = useNavigate();
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-    const [requests, setRequests]     = useState([]);
-    const [loading, setLoading]       = useState(true);
-    const [error, setError]           = useState('');
-    const [page, setPage]             = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal]           = useState(0);
-    const pollingRef = useRef(null);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pollingRef = useRef(null);
 
-    const lang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
-        const fetchRequests = async (silent = false) => {
-                    if (!silent) setLoading(true);
-                    try {
-                        const l = user?.preferredLang || i18n.language || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
-                        const res = await getRequests(page, 10, l);
-                        setRequests(res.data.requests);
-                        setTotalPages(res.data.totalPages);
-                        setTotal(res.data.total);
-                    } catch {
-                        if (!silent) setError(t('home.empty'));
-                    } finally {
-                        if (!silent) setLoading(false);
-                    }
-                };
+  const lang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
 
-                useEffect(() => { fetchRequests(); }, [page, user?.preferredLang, i18n.language]);
-        useEffect(() => {
-            const onFeed = () => { fetchRequests(true); };
-            window.addEventListener('eco-feed-refresh', onFeed);
-            return () => window.removeEventListener('eco-feed-refresh', onFeed);
-        }, [page, user?.preferredLang, i18n.language]);
+  const fetchRequests = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const l = user?.preferredLang || i18n.language || 'fr';
+      const res = await getRequests(page, 10, l);
+      setRequests(res.data.requests || []);
+      setTotalPages(res.data.totalPages || 1);
+      setTotal(res.data.total || 0);
+    } catch {
+      if (!silent) setError(t('home.empty'));
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
-    // FIX : Polling utilise getMyRequests pour détecter les demandes in-progress
-    useEffect(() => {
-        if (!user?.id) return;
+  useEffect(() => {
+    fetchRequests();
+  }, [page, user?.preferredLang, i18n.language]);
 
-        let isMounted = true;
+  useEffect(() => {
+    const onFeed = () => { fetchRequests(true); };
+    window.addEventListener('eco-feed-refresh', onFeed);
+    return () => window.removeEventListener('eco-feed-refresh', onFeed);
+  }, [page, user?.preferredLang, i18n.language]);
 
-        const checkMyRequestStatus = async () => {
-            try {
-                const res = await getMyRequests(1, 50);
-                if (!isMounted) return;
+  // Polling silencieux pour détecter l'acceptation d'une demande active de l'utilisateur
+  useEffect(() => {
+    if (!user?.id) return;
+    let isMounted = true;
 
-                const myActiveRequest = res.data.requests.find(
-                    req => req.status === 'in-progress'
-                );
-
-                if (myActiveRequest) {
-                    clearInterval(pollingRef.current);
-                    navigate(`/chat/${myActiveRequest._id}`);
-                }
-            } catch {
-                // silencieux — ne pas afficher d'erreur pour le polling
-            }
-        };
-
-        // Premier check immédiat
-        checkMyRequestStatus();
-
-        // Puis toutes les 15 secondes (FIX: était 4s, trop agressif)
-        pollingRef.current = setInterval(checkMyRequestStatus, 15000);
-
-        return () => {
-            isMounted = false;
-            clearInterval(pollingRef.current);
-        };
-    }, [user?.id]);
-
-    const handleAccept = async (requestId) => {
-        try {
-            await acceptRequest({ requestId });
-            navigate(`/chat/${requestId}`);
-        } catch (err) {
-            alert(err.response?.data?.message || "Erreur lors de l'acceptation.");
+    const checkMyRequestStatus = async () => {
+      try {
+        const res = await getMyRequests(1, 50, lang);
+        if (!isMounted) return;
+        const myActive = res.data.requests?.find((req) => req.status === 'in-progress');
+        if (myActive) {
+          clearInterval(pollingRef.current);
+          navigate(`/chat/${myActive._id}`);
         }
+      } catch {}
     };
 
-    const getBadgeStyle = (tag) => {
-        const styles = {
-            '#java':           'bg-orange-100 text-orange-700 border-orange-200',
-            '#reseau':         'bg-blue-100 text-blue-700 border-blue-200',
-            '#linux':          'bg-green-100 text-green-700 border-green-200',
-            '#python':         'bg-yellow-100 text-yellow-700 border-yellow-200',
-            '#droit':          'bg-purple-100 text-purple-700 border-purple-200',
-            '#web':            'bg-pink-100 text-pink-700 border-pink-200',
-            '#mathematiques':  'bg-red-100 text-red-700 border-red-200',
-            '#physique':       'bg-cyan-100 text-cyan-700 border-cyan-200',
-        };
-        return styles[tag] || 'bg-gray-100 text-gray-600 border-gray-200';
+    checkMyRequestStatus();
+    pollingRef.current = setInterval(checkMyRequestStatus, 15000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollingRef.current);
     };
+  }, [user?.id, lang]);
 
-    const fmtCount = (key, n) => {
-                try {
-                    const raw = t(key, { count: n });
-                    return String(raw).replace(String(n), formatNumber(n, lang));
-                } catch { return t(key, { count: n }); }
-            };
-        const getTimeAgo = (date) => {
-                const diff = Math.floor((Date.now() - new Date(date)) / 1000);
-                if (diff < 60)    return t('home.justNow');
-                if (diff < 3600)  return fmtCount('home.minutesAgo', Math.floor(diff / 60));
-                if (diff < 86400) return fmtCount('home.hoursAgo', Math.floor(diff / 3600));
-                return fmtCount('home.daysAgo', Math.floor(diff / 86400));
-            };
-        const subtitleText = (() => {
-                try {
-                    const raw = t('home.subtitle', { count: total });
-                    return String(raw).replace(String(total), formatNumber(total, lang));
-                } catch { return t('home.subtitle', { count: total }); }
-            })();
+  const handleAccept = async (requestId) => {
+    try {
+      await acceptRequest({ requestId });
+      navigate(`/chat/${requestId}`);
+    } catch (err) {
+      alert(err.response?.data?.message || t('chat.sendErr'));
+    }
+  };
 
-    return (
-        <DashboardLayout>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                                    <h1 className="text-2xl font-bold text-gray-800">{t('home.title')} 📋</h1>
-                                    <p className="text-gray-500 text-sm mt-1">
-                                                                            {subtitleText}
-                                                                        </p>
-                                </div>
-                                <button
-                                    onClick={() => navigate('/create-request')}
-                                    className="bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2"
-                                >
-                                    ✋ {t('home.askHelp')}
-                                </button>
-            </div>
+  const getTimeAgo = (date) => {
+    const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+    if (diff < 60) return t('home.justNow');
+    if (diff < 3600) return t('home.minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('home.hoursAgo', { count: Math.floor(diff / 3600) });
+    return t('home.daysAgo', { count: Math.floor(diff / 86400) });
+  };
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                            {[
-                                                { icon: '📋', label: t('home.activeDemands'), value: formatNumber(total, lang) },
-                                                { icon: '⚡', label: t('home.myXp'),           value: `${formatNumber(user?.xpPoints ?? 0, lang)} XP` },
-                                                { icon: '🎖️', label: t('home.myRank'),        value: user?.rankTitle || 'Novice' },
-                                            ].map((stat, i) => (
-                    <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
-                            {stat.icon}
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500">{stat.label}</p>
-                            <p className="text-lg font-bold text-gray-800">{stat.value}</p>
-                        </div>
+  return (
+    <DashboardLayout>
+      {/* Header page */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--heading)', letterSpacing: '-0.02em' }}>
+            {t('home.title')}
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+            {t('home.subtitle', { count: total })}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/create-request')}
+          className="btn btn-primary"
+        >
+          <Icon name="plus" size={16} />
+          <span>{t('home.askHelp')}</span>
+        </button>
+      </div>
+
+      {/* Cartes métriques académiques */}
+      <div className="dash-metrics-grid">
+        <div className="dash-metric-card">
+          <div className="dash-metric-label">{t('home.activeDemands')}</div>
+          <div className="dash-metric-val">{formatNumber(total, lang)}</div>
+        </div>
+        <div className="dash-metric-card">
+          <div className="dash-metric-label">{t('home.myXp')}</div>
+          <div className="dash-metric-val">{formatNumber(user?.xpPoints ?? 0, lang)} XP</div>
+        </div>
+        <div className="dash-metric-card">
+          <div className="dash-metric-label">{t('home.myRank')}</div>
+          <div className="dash-metric-val">{user?.rankTitle || 'Novice'}</div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="alert-error" role="alert" style={{ marginBottom: 20 }}>
+          <Icon name="alert-circle" size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Liste des demandes */}
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <span className="spinner" style={{ width: 24, height: 24 }} />
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
+            {t('home.empty')}
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+            {t('home.emptyHint')}
+          </p>
+        </div>
+      ) : (
+        <div className="dash-table-card">
+          <div className="dash-table-head">
+            <div>#</div>
+            <div>{t('home.request')}</div>
+            <div className="dash-hide-mobile">{t('home.subject')}</div>
+            <div className="dash-hide-mobile">{t('home.status')}</div>
+            <div className="dash-hide-mobile">{t('home.published')}</div>
+            <div style={{ textAlign: 'right' }}>{t('home.action')}</div>
+          </div>
+
+          {requests.map((req, index) => {
+            const isRequester = req.requesterId === user?.id;
+            const isMentor = req.mentorId === user?.id;
+            const inProgress = req.status === 'in-progress';
+
+            return (
+              <div key={req._id} className="dash-table-row">
+                <div style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 12 }}>
+                  {(page - 1) * 10 + index + 1}
+                </div>
+
+                <div style={{ minWidth: 0, paddingRight: 16 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {req.title_display || req.title}
+                  </div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {req.description_display || req.description}
+                  </div>
+                  {req.title_translated && (
+                    <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>
+                      {t('common.translatedVia', { from: req.sourceLang, to: req.viewerLang, engine: req.engine })} • {t('common.original')}: {req.title_original}
                     </div>
-                ))}
-            </div>
-
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
-                    {error}
+                  )}
                 </div>
-            )}
 
-            {/* Liste */}
-            {loading ? (
-                <div className="flex justify-center py-20">
-                    <div className="w-8 h-8 border-4 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
+                <div className="dash-hide-mobile">
+                  <span className="badge badge-blue">
+                    {req.skillTag}
+                  </span>
                 </div>
-            ) : requests.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
-                    <p className="text-5xl mb-3">📭</p>
-                    <p className="text-gray-500 font-medium">{t('home.empty')}</p>
-                                        <p className="text-gray-400 text-sm mt-1">{t('home.emptyHint')}</p>
+
+                <div className="dash-hide-mobile">
+                  {inProgress ? (
+                    <span className="badge badge-violet">
+                      {t('home.inProgress')}
+                    </span>
+                  ) : (
+                    <span className="badge badge-green">
+                      {t('home.open')}
+                    </span>
+                  )}
                 </div>
-            ) : (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="grid grid-cols-12 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        <div className="col-span-1">#</div>
-                                                <div className="col-span-4">{t('home.request')}</div>
-                                                <div className="col-span-2">{t('home.subject')}</div>
-                                                <div className="col-span-2">{t('home.status')}</div>
-                                                <div className="col-span-2">{t('home.published')}</div>
-                                                <div className="col-span-1 text-right">{t('home.action')}</div>
-                    </div>
 
-                    {requests.map((req, index) => (
-                        <div
-                            key={req._id}
-                            className={`grid grid-cols-12 px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition items-center ${
-                                req.status === 'in-progress' ? 'bg-orange-50/30' : ''
-                            }`}
-                        >
-                            <div className="col-span-1 text-gray-400 text-sm font-medium">
-                                {(page - 1) * 10 + index + 1}
-                            </div>
-
-                            <div className="col-span-4 pr-4">
-                                                            <p className="text-gray-800 font-semibold text-sm truncate">{req.title_display || req.title}</p>
-                                                            <p className="text-gray-400 text-xs mt-0.5 truncate">{req.description_display || req.description}</p>
-                                                            {req.title_translated && (
-                                                                                                                          <p className="text-[11px] text-violet-600 mt-1">{t('common.translatedVia', { from: req.sourceLang, to: req.viewerLang, engine: req.engine })} • {t('common.original')}: {req.title_original}</p>
-                                                                                                                        )}
-                                                        </div>
-
-                            <div className="col-span-2">
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(req.skillTag)}`}>
-                                    {req.skillTag}
-                                </span>
-                            </div>
-
-                            {/* FIX: colonne statut visible */}
-                            <div className="col-span-2">
-                                {req.status === 'in-progress' ? (
-                                                                    <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2.5 py-1 rounded-full">
-                                                                        🔒 {t('home.inProgress')}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full">
-                                                                        🟢 {t('home.open')}
-                                                                    </span>
-                                                                )}
-                            </div>
-
-                            <div className="col-span-2 text-gray-400 text-xs">
-                                {getTimeAgo(req.createdAt)}
-                            </div>
-
-                            <div className="col-span-1 flex justify-end">
-                                {req.status === 'in-progress' ? (
-                                    // FIX: si c'est MA demande in-progress, bouton rejoindre le chat
-                                    req.requesterId === user?.id ? (
-                                        <button
-                                                                                    onClick={() => navigate(`/chat/${req._id}`)}
-                                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                                                                                >
-                                                                                    {t('home.chat')} 💬
-                                                                                </button>
-                                                                            ) : req.mentorId === user?.id ? (
-                                                                                <button
-                                                                                    onClick={() => navigate(`/chat/${req._id}`)}
-                                                                                    className="bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                                                                                >
-                                                                                    {t('home.chat')} 💬
-                                                                                </button>
-                                                                            ) : (
-                                                                                <span className="text-xs text-gray-400 italic">{t('home.busy')}</span>
-                                                                            )
-                                                                        ) : req.requesterId === user?.id ? (
-                                                                            <span className="text-xs text-gray-400 italic">{t('home.myRequest')}</span>
-                                                                        ) : (
-                                                                            <button
-                                                                                onClick={() => handleAccept(req._id)}
-                                                                                className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap"
-                                                                            >
-                                                                                {t('home.help')} ✋
-                                                                            </button>
-                                                                        )}
-                            </div>
-                        </div>
-                    ))}
+                <div className="dash-hide-mobile" style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  {getTimeAgo(req.createdAt)}
                 </div>
-            )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 mt-6">
+                <div style={{ textAlign: 'right' }}>
+                  {inProgress ? (
+                    isRequester || isMentor ? (
+                      <button
+                        onClick={() => navigate(`/chat/${req._id}`)}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 12px', fontSize: 12 }}
+                      >
+                        <Icon name="message-square" size={13} />
+                        <span>{t('home.chat')}</span>
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+                        {t('home.busy')}
+                      </span>
+                    )
+                  ) : isRequester ? (
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+                      {t('home.myRequest')}
+                    </span>
+                  ) : (
                     <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      onClick={() => handleAccept(req._id)}
+                      className="btn btn-primary"
+                      style={{ padding: '6px 12px', fontSize: 12 }}
                     >
-                        ← {t('common.previous')}
+                      {t('home.help')}
                     </button>
-                    <span className="text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200">
-                                            {t('common.page')} {formatNumber(page, lang)} / {formatNumber(totalPages, lang)}
-                                        </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                    >
-                        {t('common.next')} →
-                    </button>
+                  )}
                 </div>
-            )}
-        </DashboardLayout>
-    );
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 24 }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: 12 }}
+          >
+            <Icon name="chevron-left" size={14} />
+            <span>{t('common.previous')}</span>
+          </button>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+            {t('common.page')} {formatNumber(page, lang)} / {formatNumber(totalPages, lang)}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: 12 }}
+          >
+            <span>{t('common.next')}</span>
+            <Icon name="chevron-right" size={14} />
+          </button>
+        </div>
+      )}
+    </DashboardLayout>
+  );
 }
