@@ -1,37 +1,193 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Eco-Mentorat Design System - Leger Afrique-first */
+/* ══════════════════════════════════════════════
+   ECO-MENTORAT — Design System v3
+   Palette : Bleu #1E3A5F · Violet #4C3575 · Vert #1A5C38
+   Police  : Inter
+   Règles  : zéro dégradé, zéro emoji UI, couleurs plates
+   ══════════════════════════════════════════════ */
+
 :root {
-  --eco: #00C48C;
-  --meta: #7B4DFF;
+  /* Couleurs principales */
+  --blue:        #1E3A5F;
+  --blue-hover:  #162E4D;
+  --blue-light:  #EEF2F8;
+  --violet:      #4C3575;
+  --violet-light:#F0EBF8;
+  --green:       #1A5C38;
+  --green-light: #F0FDF4;
+
+  /* Surfaces */
+  --bg:          #F8F7F4;
+  --surface:     #FFFFFF;
+  --border:      #E2E0DB;
+  --border-dark: #C8C5BE;
+
+  /* Texte */
+  --text:        #1A1A2E;
+  --muted:       #6B7280;
+  --placeholder: #9CA3AF;
+
+  /* Feedbacks */
+  --error:       #7F1D1D;
+  --error-light: #FEF2F2;
+  --success:     #1A5C38;
+  --warning:     #92710A;
+  --warning-light: #FEFCE8;
+
+  /* Sidebar */
+  --sidebar-bg:  #1E3A5F;
+  --sidebar-text: rgba(255,255,255,0.75);
+  --sidebar-active-bg: #FFFFFF;
+  --sidebar-active-text: #1E3A5F;
+  --sidebar-hover-bg: rgba(255,255,255,0.08);
 }
 
+/* ── Reset & base ────────────────────────────── */
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Utilitaires du design system ────────────── */
 @layer utilities {
-  .text-gradient-eco-meta {
-    background: linear-gradient(100deg, #00C48C 10%, #00A8B5 45%, #7B4DFF 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+
+  /* Couleurs sémantiques */
+  .text-blue    { color: var(--blue); }
+  .text-violet  { color: var(--violet); }
+  .text-green   { color: var(--green); }
+  .bg-eco       { background: var(--bg); }
+
+  /* Boutons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    line-height: 1;
+    white-space: nowrap;
   }
-  .bg-gradient-eco-meta {
-    background: linear-gradient(135deg, #00C48C 0%, #00A8B5 50%, #7B4DFF 100%);
+  .btn-primary {
+    background: var(--blue);
+    color: #FFFFFF;
+    border-color: var(--blue);
   }
-  .data-saver img[data-deco=true], .data-saver video { display: none !important; }
-  .data-saver * { animation: none !important; transition: none !important; }
+  .btn-primary:hover { background: var(--blue-hover); border-color: var(--blue-hover); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--blue);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { background: var(--blue-light); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background: var(--blue-light); color: var(--blue); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--error);
+    border-color: transparent;
+  }
+  .btn-danger:hover { background: var(--error-light); }
+
+  /* Badges / Pills */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+  }
+  .badge-blue   { background: var(--blue-light);   color: var(--blue); }
+  .badge-violet { background: var(--violet-light);  color: var(--violet); }
+  .badge-green  { background: var(--green-light);   color: var(--green); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  /* Inputs */
+  .input {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
+  }
+  .input::placeholder { color: var(--placeholder); }
+
+  /* Label */
+  .label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
 }
 
+/* ── Grades couleurs ──────────────────────────── */
+.grade-novice    { background: #F3F4F6; color: #4B5563; }
+.grade-apprenti  { background: #EEF2F8; color: #1E3A5F; }
+.grade-confirme  { background: #F0FDF4; color: #1A5C38; }
+.grade-expert    { background: #FEF3C7; color: #92710A; }
+.grade-legende   { background: #F0EBF8; color: #4C3575; }
+
+/* ── Tags matières ────────────────────────────── */
+.tag-java           { background: #FFF7ED; color: #9A3412; border-color: #FED7AA; }
+.tag-python         { background: #FEFCE8; color: #854D0E; border-color: #FEF08A; }
+.tag-reseau         { background: #EEF2F8; color: #1E3A5F; border-color: #BFDBFE; }
+.tag-linux          { background: #F0FDF4; color: #1A5C38; border-color: #BBF7D0; }
+.tag-web            { background: #FDF2F8; color: #701A75; border-color: #F5D0FE; }
+.tag-droit          { background: #F0EBF8; color: #4C3575; border-color: #DDD6FE; }
+.tag-mathematiques  { background: #FEF2F2; color: #7F1D1D; border-color: #FECACA; }
+.tag-physique       { background: #ECFEFF; color: #164E63; border-color: #A5F3FC; }
+.tag-default        { background: #F3F4F6; color: #374151; border-color: #E5E7EB; }
+
+/* ── Scrollbar sobre ──────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Animations réduites (réseau low-debit) ───── */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
-

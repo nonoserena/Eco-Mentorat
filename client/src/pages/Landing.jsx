@@ -1,376 +1,427 @@
 import { Link } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import logoEco from '../assets/logo-eco.svg';
+import Icon from '../components/Icon';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
+/* ─────────────────────────────────────────────────────────
+   Données statiques — traduites via i18n dans le rendu
+   ───────────────────────────────────────────────────────── */
 const FEATURES = [
-    {
-        icon: '🎯',
-        title: 'Mise en relation intelligente',
-        description: 'Décris ton problème en langage naturel. Notre système détecte automatiquement la matière et alerte uniquement les mentors compétents.'
-    },
-    {
-        icon: '🔒',
-        title: 'Chat privé sécurisé',
-        description: 'Un espace de discussion chiffré s\'ouvre entre toi et ton mentor. Partage des messages, photos de cahiers et documents PDF en toute sécurité.'
-    },
-    {
-        icon: '⭐',
-        title: 'Algorithme de réputation anti-triche',
-        description: 'Chaque mentor est évalué selon 3 facteurs : pédagogie (20%), sérieux (60%) et diversité des aides (20%). Impossible de tricher.'
-    },
-    {
-        icon: '🎮',
-        title: 'Système de gamification',
-        description: 'Gagne des XP à chaque session, monte en grade de Novice à Légende et apparais dans le classement de ta matière.'
-    },
-    {
-        icon: '📄',
-        title: 'Portfolio certifié',
-        description: 'Télécharge un portfolio PDF officiel avec tes statistiques réelles validées par nos algorithmes. Un atout pour ton CV.'
-    },
-    {
-        icon: '🤝',
-        title: '100% gratuit et équitable',
-        description: 'Eco-Mentorat est entièrement gratuit. Notre système invisible garantit l\'équilibre entre donneurs et receveurs d\'aide.'
-    }
+  { icon: 'users',       key: 'feat1' },
+  { icon: 'globe',       key: 'feat2' },
+  { icon: 'award',       key: 'feat3' },
+  { icon: 'shield',      key: 'feat4' },
+  { icon: 'trophy',      key: 'feat5' },
+  { icon: 'file-text',   key: 'feat6' },
 ];
 
-const STEPS = [
-    {
-        num: '01',
-        title: 'Crée ton profil',
-        description: 'Inscris-toi et sélectionne tes super-pouvoirs académiques parmi nos badges de compétences.',
-        icon: '👤'
-    },
-    {
-        num: '02',
-        title: 'Publie ta demande',
-        description: 'Décris ton problème simplement. Le système identifie la matière et alerte les bons mentors en temps réel.',
-        icon: '📝'
-    },
-    {
-        num: '03',
-        title: 'Reçois de l\'aide',
-        description: 'Un mentor accepte, un chat privé s\'ouvre. Discutez, partagez des documents jusqu\'à la compréhension.',
-        icon: '💬'
-    },
-    {
-        num: '04',
-        title: 'Note et progresse',
-        description: 'Note ton mentor, gagne des XP, monte en grade et construis ton portfolio de compétences certifié.',
-        icon: '🏆'
-    }
+const FEATURE_ICON_COLORS = {
+  users:        { bg: '#EEF2F8', stroke: '#1E3A5F' },
+  globe:        { bg: '#F0EBF8', stroke: '#4C3575' },
+  award:        { bg: '#F0FDF4', stroke: '#1A5C38' },
+  shield:       { bg: '#EEF2F8', stroke: '#1E3A5F' },
+  trophy:       { bg: '#F0EBF8', stroke: '#4C3575' },
+  'file-text':  { bg: '#F0FDF4', stroke: '#1A5C38' },
+};
+
+const MOCK_LEADERBOARD = [
+  { pos: 1, initial: 'A', name: 'aidaninja_cm', grade: 'Légende', gradeKey: 'legende', xp: '5 420' },
+  { pos: 2, initial: 'S', name: 'serena_dev',   grade: 'Expert',  gradeKey: 'expert',  xp: '2 310' },
+  { pos: 3, initial: 'K', name: 'kaito_jp',     grade: 'Confirmé',gradeKey: 'confirme',xp: '1 080' },
 ];
 
-const TESTIMONIALS = [
-    {
-        name: 'Adjoua M.',
-        role: 'L2 Informatique',
-        avatar: 'A',
-        color: 'from-blue-500 to-violet-500',
-        text: 'J\'étais bloquée sur les pointeurs en C depuis des heures. En 10 minutes sur Eco-Mentorat, un mentor m\'a tout expliqué avec des exemples. Incroyable !'
-    },
-    {
-        name: 'Kofi B.',
-        role: 'L3 Génie Logiciel',
-        avatar: 'K',
-        color: 'from-green-500 to-teal-500',
-        text: 'En tant que mentor, j\'ai aidé plus de 15 étudiants en Java ce mois-ci. Mon score de réputation est à 4.8/5 et mon portfolio attire déjà des recruteurs.'
-    },
-    {
-        name: 'Aminata S.',
-        role: 'L1 Droit',
-        avatar: 'A',
-        color: 'from-orange-500 to-red-500',
-        text: 'La plateforme est simple et efficace. J\'ai trouvé de l\'aide pour mon cours de droit des contrats en quelques minutes. Je recommande à tous !'
-    }
-];
+const AVATAR_COLORS = ['#1E3A5F', '#4C3575', '#1A5C38'];
 
+/* ─────────────────────────────────────────────────────────
+   Composants internes
+   ───────────────────────────────────────────────────────── */
+
+/** Bulle avatar initiale */
+function Avatar({ initial, bg, size = 32 }) {
+  return (
+    <div
+      style={{
+        width: size, height: size,
+        background: bg,
+        borderRadius: '50%',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 700,
+        fontSize: size * 0.4,
+        flexShrink: 0,
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
+
+/** Badge de grade */
+function GradeBadge({ gradeKey, label }) {
+  const MAP = {
+    novice:   'grade-novice',
+    apprenti: 'grade-apprenti',
+    confirme: 'grade-confirme',
+    expert:   'grade-expert',
+    legende:  'grade-legende',
+  };
+  return (
+    <span className={`badge ${MAP[gradeKey] || 'grade-novice'}`} style={{ fontSize: 11 }}>
+      {label}
+    </span>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   Composant principal Landing
+   ───────────────────────────────────────────────────────── */
 export default function Landing() {
-    const { t } = useTranslation();
-    const { isDark, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
-    return (
-        <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+  return (
+    <div style={{ background: '#F8F7F4', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-            {/* ── NAVBAR ── */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-                <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-                    {/* Logo Eco-Mentorat + Meta AI */}
-                                        <div className="flex items-center gap-2">
-                                            <img src={logoEco} alt="Eco-Mentorat logo" className="w-9 h-9" loading="eager" />
-                                            <span className="text-xl font-extrabold text-gray-900 dark:text-white">
-                                                Eco-Mentorat
-                                            </span>
-                                            <span className="hidden sm:inline-flex text-[11px] font-bold px-2 py-1 rounded-full bg-meta-50 text-meta-600 border border-meta-500/20">Powered by Meta AI</span>
-                                        </div>
+      {/* ══════════════════ NAVBAR ══════════════════ */}
+      <nav style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E2E0DB',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        padding: '0 48px',
+        height: 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        {/* Logo */}
+        <span style={{ fontSize: 18, fontWeight: 800, color: '#1E3A5F', letterSpacing: '-0.03em' }}>
+          Eco<span style={{ color: '#4C3575' }}>-Mentorat</span>
+        </span>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3">
-                        {/* Toggle mode sombre */}
-                        <button
-                            onClick={toggleTheme}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                            title={isDark ? 'Mode clair' : 'Mode sombre'}
-                        >
-                            {isDark ? '☀️' : '🌙'}
-                        </button>
-
-                        <Link
-                            to="/login"
-                            className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-900 dark:hover:text-white transition px-3 py-2"
-                        >
-                            {t('landing.login')}
-                        </Link>
-                        <Link
-                            to="/register"
-                            className="text-sm font-semibold bg-gradient-to-r from-blue-900 to-violet-600 text-white px-4 py-2 rounded-xl hover:from-blue-800 hover:to-violet-500 transition shadow-md"
-                        >
-                            {t('landing.startFree')}
-                        </Link>
-                    </div>
-                </div>
-            </nav>
-
-            {/* ── HERO ── */}
-            <section className="pt-32 pb-20 px-6">
-                <div className="max-w-5xl mx-auto text-center">
-
-                    {/* Badges Meta + Low-débit */}
-                                        <div className="flex flex-wrap justify-center gap-2 mb-6">
-                                            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-eco-50 text-eco-600 border border-eco-500/20">🌍 Douala ⇄ Osaka sans apprendre la langue de l'autre</span>
-                                            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-meta-50 text-meta-600 border border-meta-500/20">✨ NLLB-200 + Llama 3 + Seamless</span>
-                                            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border">📶 Works on 2G</span>
-                                        </div>
-
-                                        {/* Titre */}
-                                        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 dark:text-white mb-6 leading-[1.05]">
-                                            {t('landing.title1')}
-                                            <br />
-                                            <span className="text-gradient-eco-meta">
-                                                {t('landing.title2')}
-                                            </span>
-                                        </h1>
-
-                                        {/* Sous-titre */}
-                                        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-                                            {t('landing.heroSub')}</p>
-
-                                        {/* Démo live FR -> JA */}
-                                        <div className="max-w-xl mx-auto mb-10 grid gap-3 text-left">
-                                            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-                                                <p className="text-xs font-bold text-eco-600 mb-1">🇨🇲 Douala — en français :</p>
-                                                <p className="text-sm text-gray-800 dark:text-gray-100">Salut ! Je bloque sur ma boucle for en Python, tu peux m'expliquer ?</p>
-                                            </div>
-                                            <div className="bg-gradient-eco-meta rounded-2xl p-4 shadow-lg text-left">
-                                                <p className="text-xs font-bold text-white/80 mb-1">🇯🇵 Osaka — reçoit en japonais : <span className="bg-white/20 px-1 rounded">Traduit par Meta AI</span></p>
-                                                <p className="text-sm text-white font-semibold">こんにちは！Pythonのforループで困っています、説明してもらえますか？</p>
-                                            </div>
-                                        </div>
-
-                    {/* CTAs */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link
-                            to="/register"
-                            className="w-full sm:w-auto bg-gradient-eco-meta text-white font-bold px-8 py-4 rounded-xl transition shadow-lg text-base"
-                        >
-                            {t('landing.ctaJoin')} 🚀
-                        </Link>
-                        <Link
-                            to="/login"
-                            className="w-full sm:w-auto border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 font-semibold px-8 py-4 rounded-xl transition text-base"
-                        >
-                            {t('landing.ctaHaveAccount')}
-                        </Link>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-14">
-                        {[
-                            { value: '100%', label: 'Gratuit' },
-                            { value: '3 facteurs', label: 'Anti-triche' },
-                            { value: '5⭐', label: 'Réputation certifiée' },
-                            { value: '<5min', label: 'Temps de réponse' },
-                        ].map((stat, i) => (
-                            <div key={i} className="text-center">
-                                <p className="text-2xl font-extrabold text-gradient-eco-meta">
-                                    {stat.value}
-                                </p>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── FONCTIONNALITÉS ── */}
-            <section className="py-20 px-6 bg-gray-50 dark:bg-gray-900">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-14">
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            {t('landing.featTitle')}
-                        </h2>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                            Eco-Mentorat réunit toutes les fonctionnalités pour une entraide académique efficace, équitable et sécurisée.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {FEATURES.map((feature, i) => (
-                            <div
-                                key={i}
-                                className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition"
-                            >
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-900/30 dark:to-violet-900/30 rounded-xl flex items-center justify-center text-2xl mb-4">
-                                    {feature.icon}
-                                </div>
-                                <h3 className="text-gray-900 dark:text-white font-semibold mb-2">
-                                    {feature.title}
-                                </h3>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                    {feature.description}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── COMMENT ÇA MARCHE ── */}
-            <section className="py-20 px-6">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-14">
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            {t('landing.howTitle')}
-                        </h2>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                            En 4 étapes simples, passe du blocage à la compréhension.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {STEPS.map((step, i) => (
-                            <div key={i} className="relative">
-                                {/* Connecteur */}
-                                {i < STEPS.length - 1 && (
-                                    <div className="hidden lg:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-blue-200 to-violet-200 dark:from-blue-800 dark:to-violet-800 z-0" style={{ width: 'calc(100% - 2rem)', left: 'calc(50% + 2rem)' }}></div>
-                                )}
-
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm text-center relative z-10">
-                                    {/* Numéro */}
-                                    <div className="text-xs font-bold text-violet-400 dark:text-violet-400 mb-3 tracking-widest">
-                                        ÉTAPE {step.num}
-                                    </div>
-
-                                    {/* Icône */}
-                                    <div className="w-14 h-14 bg-gradient-to-br from-blue-900 to-violet-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 shadow-md">
-                                        {step.icon}
-                                    </div>
-
-                                    <h3 className="text-gray-900 dark:text-white font-semibold mb-2">
-                                        {step.title}
-                                    </h3>
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                        {step.description}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── TÉMOIGNAGES ── */}
-            <section className="py-20 px-6 bg-gray-50 dark:bg-gray-900">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-14">
-                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            Ce qu'ils en pensent
-                        </h2>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                            Des étudiants qui ont trouvé de l'aide ou aidé leurs camarades sur Eco-Mentorat.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {TESTIMONIALS.map((item, i) => (
-                            <div
-                                key={i}
-                                className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm"
-                            >
-                                {/* Étoiles */}
-                                <div className="text-yellow-400 text-sm mb-4">★★★★★</div>
-
-                                {/* Texte */}
-                                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-5 italic">
-                                    "{item.text}"
-                                </p>
-
-                                {/* Auteur */}
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white font-bold text-sm`}>
-                                        {item.avatar}
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-900 dark:text-white font-semibold text-sm">{item.name}</p>
-                                        <p className="text-gray-400 text-xs">{item.role}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── CTA FINAL ── */}
-            <section className="py-20 px-6">
-                <div className="max-w-3xl mx-auto text-center">
-                    <div className="bg-gradient-to-br from-blue-900 to-violet-700 rounded-3xl p-12 shadow-2xl relative overflow-hidden">
-                        {/* Cercles déco */}
-                        <div className="absolute top-[-40px] right-[-40px] w-40 h-40 bg-white/5 rounded-full"></div>
-                        <div className="absolute bottom-[-30px] left-[-30px] w-32 h-32 bg-white/5 rounded-full"></div>
-
-                        <h2 className="text-3xl font-bold text-white mb-4 relative z-10">
-                            {t('landing.ctaFinalTitle')}
-                        </h2>
-                        <p className="text-blue-100 mb-8 relative z-10 leading-relaxed">
-                            {t('landing.ctaFinalSub')}</p>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                            <Link
-                                to="/register"
-                                className="w-full sm:w-auto bg-white text-blue-900 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg text-base"
-                            >
-                                {t('landing.ctaCreate')} 🚀
-                            </Link>
-                            <Link
-                                to="/login"
-                                className="w-full sm:w-auto border-2 border-white/30 text-white font-semibold px-8 py-4 rounded-xl hover:border-white/60 transition text-base"
-                            >
-                                {t('landing.login')} →
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── FOOTER ── */}
-            <footer className="py-8 px-6 border-t border-gray-100 dark:border-gray-800">
-                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <img src={logoEco} alt="logo Eco-Mentorat" className="w-6 h-6" />
-                                                <span className="text-gray-600 dark:text-gray-400 text-sm font-bold">Eco-Mentorat</span>
-                                                <span className="text-[11px] text-gray-400">Powered by Meta AI • Works on 2G</span>
-                    </div>
-                    <p className="text-gray-400 text-xs">
-                        © 2025 Eco-Mentorat · 100% gratuit · Sécurisé · Anti-triche
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
-                        <Link to="/register" className="hover:text-gray-600 dark:hover:text-gray-300 transition">S'inscrire</Link>
-                        <Link to="/login" className="hover:text-gray-600 dark:hover:text-gray-300 transition">{t('landing.login')}</Link>
-                    </div>
-                </div>
-            </footer>
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LanguageSwitcher compact />
+          <Link
+            to="/login"
+            style={{
+              padding: '8px 18px', fontSize: 14, fontWeight: 500,
+              color: '#1E3A5F', border: '1px solid transparent',
+              borderRadius: 6, textDecoration: 'none',
+              transition: 'background .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#EEF2F8'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            {t('nav.login')}
+          </Link>
+          <Link
+            to="/register"
+            style={{
+              padding: '8px 18px', fontSize: 14, fontWeight: 600,
+              color: '#FFFFFF', background: '#1E3A5F',
+              border: '1px solid #1E3A5F', borderRadius: 6,
+              textDecoration: 'none', transition: 'background .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#162E4D'}
+            onMouseLeave={e => e.currentTarget.style.background = '#1E3A5F'}
+          >
+            {t('nav.register')}
+          </Link>
         </div>
-    );
+      </nav>
+
+      {/* ══════════════════ HERO ══════════════════ */}
+      <section style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E2E0DB',
+        padding: '80px 48px 72px',
+        textAlign: 'center',
+      }}>
+        {/* Pill label */}
+        <div style={{
+          display: 'inline-block',
+          fontSize: 11, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+          color: '#4C3575', background: '#F0EBF8',
+          border: '1px solid #D8CFF0',
+          borderRadius: 4, padding: '4px 12px', marginBottom: 24,
+        }}>
+          {t('landing.label')}
+        </div>
+
+        {/* Titre */}
+        <h1 style={{
+          fontSize: 'clamp(36px, 5vw, 52px)',
+          fontWeight: 800, color: '#1E3A5F',
+          letterSpacing: '-0.04em', lineHeight: 1.1,
+          maxWidth: 680, margin: '0 auto 16px',
+        }}>
+          {t('landing.heroTitle1')}{' '}
+          <span style={{ color: '#4C3575' }}>{t('landing.heroTitle2')}</span>
+        </h1>
+
+        {/* Sous-titre */}
+        <p style={{
+          fontSize: 18, color: '#6B7280',
+          maxWidth: 520, margin: '0 auto 36px',
+          lineHeight: 1.65,
+        }}>
+          {t('landing.heroSub')}
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Link
+            to="/register"
+            style={{
+              padding: '12px 28px', fontSize: 15, fontWeight: 600,
+              background: '#1E3A5F', color: '#FFFFFF',
+              border: '1px solid #1E3A5F', borderRadius: 6,
+              textDecoration: 'none', transition: 'background .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#162E4D'}
+            onMouseLeave={e => e.currentTarget.style.background = '#1E3A5F'}
+          >
+            {t('landing.ctaJoin')}
+          </Link>
+          <Link
+            to="/login"
+            style={{
+              padding: '12px 28px', fontSize: 15, fontWeight: 600,
+              background: 'transparent', color: '#1E3A5F',
+              border: '1px solid #E2E0DB', borderRadius: 6,
+              textDecoration: 'none', transition: 'background .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#EEF2F8'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            {t('landing.ctaLogin')}
+          </Link>
+        </div>
+      </section>
+
+      {/* ══════════════════ BARRE STATS ══════════════════ */}
+      <div style={{
+        background: '#1E3A5F',
+        padding: '28px 48px',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: 'clamp(32px, 5vw, 64px)',
+        flexWrap: 'wrap',
+      }}>
+        {[
+          { num: '8',    label: t('landing.statLangs') },
+          { num: '12+',  label: t('landing.statSubjects') },
+          { num: '100%', label: t('landing.statFree') },
+          { num: '0',    label: t('landing.statFees') },
+        ].map((s, i) => (
+          <div key={i} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.03em' }}>{s.num}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ══════════════════ FONCTIONNALITÉS ══════════════════ */}
+      <section style={{ padding: '72px 48px', background: '#F8F7F4', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4C3575', marginBottom: 8 }}>
+          {t('landing.whyLabel')}
+        </div>
+        <h2 style={{ fontSize: 30, fontWeight: 700, color: '#1E3A5F', letterSpacing: '-0.03em', marginBottom: 12 }}>
+          {t('landing.whyTitle')}
+        </h2>
+        <p style={{ fontSize: 15, color: '#6B7280', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.6 }}>
+          {t('landing.whySub')}
+        </p>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 20, maxWidth: 960, margin: '0 auto',
+        }}>
+          {FEATURES.map(({ icon, key }) => {
+            const col = FEATURE_ICON_COLORS[icon];
+            return (
+              <div key={key} className="card" style={{ padding: 28, textAlign: 'left' }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 8,
+                  background: col.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 16,
+                }}>
+                  <Icon name={icon} size={20} color={col.stroke} />
+                </div>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', marginBottom: 8 }}>
+                  {t(`landing.${key}Title`)}
+                </h3>
+                <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.65 }}>
+                  {t(`landing.${key}Desc`)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ══════════════════ COMMENT ÇA MARCHE ══════════════════ */}
+      <section style={{ padding: '72px 48px', background: '#FFFFFF', borderTop: '1px solid #E2E0DB', borderBottom: '1px solid #E2E0DB', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4C3575', marginBottom: 8 }}>
+          {t('landing.howLabel')}
+        </div>
+        <h2 style={{ fontSize: 30, fontWeight: 700, color: '#1E3A5F', letterSpacing: '-0.03em', marginBottom: 12 }}>
+          {t('landing.howTitle')}
+        </h2>
+        <p style={{ fontSize: 15, color: '#6B7280', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.6 }}>
+          {t('landing.howSub')}
+        </p>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 32, maxWidth: 860, margin: '0 auto',
+          position: 'relative',
+        }}>
+          {[1, 2, 3].map(n => (
+            <div key={n} style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%',
+                background: '#1E3A5F', color: '#FFFFFF',
+                fontSize: 15, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                {n}
+              </div>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', marginBottom: 8 }}>
+                {t(`landing.step${n}Title`)}
+              </h3>
+              <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.65 }}>
+                {t(`landing.step${n}Desc`)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════ CLASSEMENT APERÇU ══════════════════ */}
+      <section style={{ padding: '72px 48px', background: '#F8F7F4', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#4C3575', marginBottom: 8 }}>
+          {t('landing.rankLabel')}
+        </div>
+        <h2 style={{ fontSize: 30, fontWeight: 700, color: '#1E3A5F', letterSpacing: '-0.03em', marginBottom: 12 }}>
+          {t('landing.rankTitle')}
+        </h2>
+        <p style={{ fontSize: 15, color: '#6B7280', maxWidth: 480, margin: '0 auto 40px', lineHeight: 1.6 }}>
+          {t('landing.rankSub')}
+        </p>
+
+        {/* Tableau */}
+        <div className="card" style={{ maxWidth: 640, margin: '0 auto', overflow: 'hidden' }}>
+          {/* En-tête */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '48px 1fr 110px 90px',
+            padding: '10px 20px', background: '#F3F2EF',
+            borderBottom: '1px solid #E2E0DB',
+            fontSize: 11, fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6B7280',
+            textAlign: 'left',
+          }}>
+            <span>#</span>
+            <span>{t('leaderboard.mentor')}</span>
+            <span>{t('leaderboard.grade')}</span>
+            <span>{t('leaderboard.score')}</span>
+          </div>
+
+          {MOCK_LEADERBOARD.map((row, i) => (
+            <div key={row.pos} style={{
+              display: 'grid', gridTemplateColumns: '48px 1fr 110px 90px',
+              padding: '14px 20px', alignItems: 'center',
+              borderBottom: i < MOCK_LEADERBOARD.length - 1 ? '1px solid #E2E0DB' : 'none',
+              textAlign: 'left',
+            }}>
+              <span style={{
+                fontWeight: 700, fontSize: 14,
+                color: i === 0 ? '#92710A' : i === 1 ? '#6B7280' : '#7C4A1C',
+              }}>
+                {row.pos}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar initial={row.initial} bg={AVATAR_COLORS[i]} size={32} />
+                <span style={{ fontWeight: 500, fontSize: 14, color: '#1A1A2E' }}>{row.name}</span>
+              </div>
+              <GradeBadge gradeKey={row.gradeKey} label={row.grade} />
+              <span style={{ fontWeight: 600, fontSize: 13, color: '#1E3A5F' }}>{row.xp} XP</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════ CTA FINAL ══════════════════ */}
+      <section style={{
+        background: '#1E3A5F',
+        padding: '72px 48px',
+        textAlign: 'center',
+      }}>
+        <h2 style={{ fontSize: 32, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.03em', marginBottom: 12 }}>
+          {t('landing.ctaFinalTitle')}
+        </h2>
+        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.55)', marginBottom: 32 }}>
+          {t('landing.ctaFinalSub')}
+        </p>
+        <Link
+          to="/register"
+          style={{
+            padding: '13px 32px', fontSize: 15, fontWeight: 600,
+            background: '#FFFFFF', color: '#1E3A5F',
+            border: 'none', borderRadius: 6,
+            textDecoration: 'none', display: 'inline-block',
+            transition: 'background .15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#EEF2F8'}
+          onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}
+        >
+          {t('landing.ctaCreate')}
+        </Link>
+      </section>
+
+      {/* ══════════════════ FOOTER ══════════════════ */}
+      <footer style={{
+        background: '#FFFFFF',
+        borderTop: '1px solid #E2E0DB',
+        padding: '24px 48px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 16,
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#1E3A5F' }}>
+          Eco<span style={{ color: '#4C3575' }}>-Mentorat</span>
+        </span>
+        <span style={{ fontSize: 13, color: '#9CA3AF' }}>
+          {t('landing.footerTag')}
+        </span>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { to: '/register', label: t('nav.register') },
+            { to: '/login',    label: t('nav.login') },
+          ].map(link => (
+            <Link
+              key={link.to}
+              to={link.to}
+              style={{ fontSize: 13, color: '#6B7280', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#1E3A5F'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </footer>
+
+    </div>
+  );
 }
