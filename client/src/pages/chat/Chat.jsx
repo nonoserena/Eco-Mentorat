@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { useTranslation } from 'react-i18next';
 import { sendMessage, getChatHistory, completeRequest, getRequestById, replaceMentor } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatTime } from '../../utils/format';
 
 // Docker-first : via Nginx (8082) on passe par le proxy /socket.io/ même origine, en dev on garde 5000
 const getSocketURL = () => {
@@ -15,6 +17,8 @@ export default function Chat() {
     const { requestId }         = useParams();
     const navigate              = useNavigate();
     const { user: currentUser, updateUser } = useAuth();
+    const { t, i18n } = useTranslation();
+    const lang = (currentUser?.preferredLang || i18n.language || 'fr').slice(0, 2);
     const bottomRef             = useRef(null);
     const fileInputRef          = useRef(null);
     const socketRef             = useRef(null);
@@ -67,7 +71,7 @@ export default function Chat() {
                                                 url: m.fileUrl,
                                                 isMe: m.senderId?.toString() === myId,
                                                 username: m.senderUsername,
-                                                time: new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                                time: formatTime(m.createdAt, lang)
                                             };
                                         });
                                         setMessages(mapped);
@@ -115,7 +119,7 @@ export default function Chat() {
                         url: msg.url || msg.fileUrl || null,
                         isMe: false,
                         username: msg.username,
-                        time: msg.time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                        time: msg.time || formatTime(new Date(), lang)
                     };
                     setMessages(prev => [...prev, normalized]);
                 });
@@ -161,7 +165,7 @@ export default function Chat() {
                 content: input,
                 type: 'text',
                 isMe: true,
-                time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                time: formatTime(new Date(), lang)
             };
 
             setMessages(prev => [...prev, newMsg]);
@@ -182,7 +186,7 @@ export default function Chat() {
             if (msg.includes('interdites')) {
                 setBlocked(true);
             } else {
-                alert(msg || "Erreur lors de l'envoi.");
+                alert(msg || t('chat.sendErr'));
             }
         } finally {
             setLoading(false);
@@ -195,17 +199,17 @@ export default function Chat() {
 
         const formatsAutorises = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
         if (!formatsAutorises.includes(file.type)) {
-            alert('❌ Format non autorisé. Seuls les PDF et images (JPG, PNG) sont acceptés.');
+            alert(t('chat.formatErr'));
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert('❌ Fichier trop volumineux. La taille maximale est de 5 Mo.');
+            alert(t('chat.sizeErr'));
             return;
         }
 
         const isImage = file.type.startsWith('image/');
         const url     = URL.createObjectURL(file);
-        const time    = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const time    = formatTime(new Date(), lang);
 
         const newMsg = {
             id: Date.now(),
@@ -233,7 +237,7 @@ export default function Chat() {
     };
 
     const handleComplete = async () => {
-        if (rating === 0) return alert('Veuillez donner une note entre 1 et 5 étoiles.');
+        if (rating === 0) return alert(t('chat.giveNote'));
         setCompleting(true);
         try {
             const res = await completeRequest({ requestId, rating });
@@ -249,20 +253,20 @@ export default function Chat() {
 
             navigate('/home');
         } catch (err) {
-            alert(err.response?.data?.message || 'Erreur lors de la clôture.');
+            alert(err.response?.data?.message || t('chat.closeErr'));
         } finally {
             setCompleting(false);
         }
     };
 
     const handleReplaceMentor = async () => {
-        if (!window.confirm('Confirmer le remplacement du mentor ? Sa réputation sera impactée.')) return;
+        if (!window.confirm(t('chat.confirmReplace'))) return;
         setReplacing(true);
         try {
             await replaceMentor({ requestId });
             navigate('/home');
         } catch (err) {
-            alert(err.response?.data?.message || 'Erreur lors du remplacement.');
+            alert(err.response?.data?.message || t('chat.replaceErr'));
         } finally {
             setReplacing(false);
         }
@@ -283,12 +287,12 @@ export default function Chat() {
             <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
                 <div className="bg-gray-800 rounded-2xl p-10 max-w-sm w-full text-center">
                     <p className="text-5xl mb-4">🎓</p>
-                    <h2 className="text-white text-xl font-bold mb-2">Session terminée !</h2>
+                    <h2 className="text-white text-xl font-bold mb-2">{t('chat.sessionEnded')}</h2>
                     <p className="text-gray-400 text-sm mb-4">
-                        L'apprenant a clôturé la session et t'a attribué une note.
+                        {t('chat.sessionEndedSub')}
                     </p>
                     <p className="text-gray-500 text-xs">
-                        Redirection automatique dans 3 secondes...
+                        {t('chat.redirecting')}
                     </p>
                     <div className="mt-4 w-full bg-gray-700 rounded-full h-1">
                         <div className="bg-gradient-to-r from-blue-500 to-violet-500 h-1 rounded-full animate-pulse w-full"></div>
@@ -314,20 +318,20 @@ export default function Chat() {
                         🔒
                     </div>
                     <div>
-                        <h1 className="text-white font-semibold text-sm">Session d'entraide privée</h1>
+                        <h1 className="text-white font-semibold text-sm">{t('chat.title')}</h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                            <span className="text-gray-400 text-xs">Chiffré · Personne d'autre ne peut lire</span>
+                            <span className="text-gray-400 text-xs">{t('chat.subtitle')}</span>
                             {isApprenant && (
                                 <span className="bg-blue-900 text-blue-300 text-xs px-2 py-0.5 rounded-full">
-                                    👤 Apprenant
+                                    👤 {t('chat.learner')}
                                 </span>
                             )}
                             {isMentor && (
-                                <span className="bg-green-900 text-green-300 text-xs px-2 py-0.5 rounded-full">
-                                    🎓 Mentor
-                                </span>
-                            )}
+                                                            <span className="bg-green-900 text-green-300 text-xs px-2 py-0.5 rounded-full">
+                                                                🎓 {t('chat.mentor')}
+                                                            </span>
+                                                        )}
                         </div>
                     </div>
                 </div>
@@ -340,19 +344,19 @@ export default function Chat() {
                                 disabled={replacing}
                                 className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 px-3 py-2 rounded-lg transition disabled:opacity-50"
                             >
-                                🔄 {replacing ? 'Remplacement...' : 'Remplacer le mentor'}
+                                🔄 {replacing ? t('chat.replacing') : t('chat.replace')}
                             </button>
                             <button
                                 onClick={() => setShowRating(true)}
                                 className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
                             >
-                                ✅ Clôturer & noter
+                                ✅ {t('chat.closeRate')}
                             </button>
                         </>
                     )}
                     {isMentor && (
                         <span className="text-gray-400 text-xs italic px-3">
-                            ⏳ En attente que l'apprenant clôture la session
+                            ⏳ {t('chat.waitingClose')}
                         </span>
                     )}
                 </div>
@@ -362,7 +366,7 @@ export default function Chat() {
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
                 <div className="flex justify-center">
                     <div className="bg-gray-800 text-gray-400 text-xs px-4 py-2 rounded-full">
-                        🔒 Session privée ouverte — Bonne entraide !
+                        🔒 {t('chat.privateOpened')}
                     </div>
                 </div>
 
@@ -378,8 +382,8 @@ export default function Chat() {
                     <div className="flex justify-center py-10">
                         <div className="text-center">
                             <p className="text-4xl mb-3">💬</p>
-                            <p className="text-gray-500 text-sm">Commence la conversation !</p>
-                            <p className="text-gray-600 text-xs mt-1">Tu peux envoyer des messages, des PDF ou des photos</p>
+                            <p className="text-gray-500 text-sm">{t('chat.startConv')}</p>
+                            <p className="text-gray-600 text-xs mt-1">{t('chat.canSend')}</p>
                         </div>
                     </div>
                 )}
@@ -401,14 +405,14 @@ export default function Chat() {
                                                                 {(msg.content_translated || msg.translated) && !msg.isMe && !showOriginal[msg.id] ? (
                                                                     <>
                                                                         <p>{msg.content_translated || msg.translated}</p>
-                                                                        <p className="text-[11px] opacity-70 mt-1 italic">Original FR : {msg.content}</p>
-                                                                        {msg.engine && <p className="text-[10px] opacity-60 mt-0.5">Traduit via {msg.engine}</p>}
-                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: true }))} className="text-[11px] underline opacity-80 mt-1">Voir original</button>
+                                                                        <p className="text-[11px] opacity-70 mt-1 italic">{t('common.original')} : {msg.content}</p>
+                                                                        {msg.engine && <p className="text-[10px] opacity-60 mt-0.5">{t('chat.via', { engine: msg.engine })}</p>}
+                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: true }))} className="text-[11px] underline opacity-80 mt-1">{t('chat.seeOriginal')}</button>
                                                                     </>
                                                                 ) : (msg.content_translated || msg.translated) && !msg.isMe && showOriginal[msg.id] ? (
                                                                     <>
                                                                         <p>{msg.content}</p>
-                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: false }))} className="text-[11px] underline opacity-80 mt-1">Voir traduction</button>
+                                                                        <button onClick={() => setShowOriginal(prev => ({ ...prev, [msg.id]: false }))} className="text-[11px] underline opacity-80 mt-1">{t('chat.seeTranslation')}</button>
                                                                     </>
                                                                 ) : (
                                                                     <p>{msg.content}</p>
@@ -419,8 +423,8 @@ export default function Chat() {
                             {msg.type === 'image' && (
                                 <div className={`rounded-2xl overflow-hidden max-w-xs ${msg.isMe ? 'rounded-br-none' : 'rounded-bl-none'}`}>
                                     <img
-                                        src={msg.url}
-                                        alt="Photo partagée"
+                                                                            src={msg.url}
+                                                                            alt={t('chat.sharedPhoto')}
                                         className="w-full object-cover cursor-pointer hover:opacity-90 transition"
                                         onClick={() => window.open(msg.url, '_blank')}
                                     />
@@ -440,7 +444,7 @@ export default function Chat() {
                                     <span className="text-2xl">📄</span>
                                     <div>
                                         <p className="text-sm font-semibold truncate max-w-[160px]">{msg.content}</p>
-                                        <p className="text-xs opacity-70">Cliquer pour télécharger</p>
+                                        <p className="text-xs opacity-70">{t('chat.clickDownload')}</p>
                                     </div>
                                 </a>
                             )}
@@ -453,7 +457,7 @@ export default function Chat() {
                 {blocked && (
                     <div className="flex justify-center">
                         <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs px-4 py-2 rounded-xl max-w-sm text-center">
-                            ⚠️ Message bloqué. Eco-Mentorat est 100% gratuit.
+                            ⚠️ {t('chat.blockedMsg')}
                         </div>
                     </div>
                 )}
@@ -474,7 +478,7 @@ export default function Chat() {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl transition"
-                        title="PDF, JPG, PNG — max 5Mo"
+                        title={t('chat.attachTitle')}
                     >
                         📎
                     </button>
@@ -489,7 +493,7 @@ export default function Chat() {
                                     handleSend();
                                 }
                             }}
-                            placeholder="Écris ton message... (Entrée pour envoyer)"
+                            placeholder={t('chat.placeholder')}
                             rows={1}
                             maxLength={500}
                             className="w-full bg-transparent text-gray-100 text-sm focus:outline-none resize-none placeholder-gray-500"
@@ -508,7 +512,7 @@ export default function Chat() {
                     </button>
                 </div>
                 <p className="text-gray-600 text-xs mt-2 text-center">
-                    📎 Formats acceptés : PDF, JPG, PNG — Max 5 Mo
+                    📎 {t('chat.acceptedFormats')}
                 </p>
             </div>
 
@@ -518,9 +522,9 @@ export default function Chat() {
                     <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
                         <div className="text-center mb-6">
                             <p className="text-4xl mb-2">🎓</p>
-                            <h2 className="text-xl font-bold text-gray-800">Note ton mentor</h2>
+                            <h2 className="text-xl font-bold text-gray-800">{t('chat.rateMentor')}</h2>
                             <p className="text-gray-500 text-sm mt-1">
-                                Ta note aide la communauté à identifier les meilleurs mentors.
+                                {t('chat.rateHint')}
                             </p>
                         </div>
 
@@ -541,38 +545,38 @@ export default function Chat() {
                         </div>
 
                         <p className="text-center text-sm text-gray-500 mb-6 h-5">
-                            {(hoverRating || rating) === 1 && '😞 Pas satisfait'}
-                            {(hoverRating || rating) === 2 && '😐 Moyen'}
-                            {(hoverRating || rating) === 3 && '🙂 Bien'}
-                            {(hoverRating || rating) === 4 && '😊 Très bien'}
-                            {(hoverRating || rating) === 5 && '🤩 Excellent !'}
-                        </p>
+                                                    {(hoverRating || rating) === 1 && t('chat.rate1')}
+                                                    {(hoverRating || rating) === 2 && t('chat.rate2')}
+                                                    {(hoverRating || rating) === 3 && t('chat.rate3')}
+                                                    {(hoverRating || rating) === 4 && t('chat.rate4')}
+                                                    {(hoverRating || rating) === 5 && t('chat.rate5')}
+                                                </p>
 
-                        <div className="bg-blue-50 rounded-xl p-3 mb-5 text-xs text-blue-700">
-                            <p className="font-semibold mb-1">Comment la réputation est calculée :</p>
-                            <p>🎯 Pédagogie (ta note) : 20%</p>
-                            <p>💪 Sérieux & Fiabilité : 60%</p>
-                            <p>🤝 Diversité des aides : 20%</p>
-                        </div>
+                                                <div className="bg-blue-50 rounded-xl p-3 mb-5 text-xs text-blue-700">
+                                                    <p className="font-semibold mb-1">{t('chat.repTitle')}</p>
+                                                    <p>🎯 {t('chat.rep1')}</p>
+                                                    <p>💪 {t('chat.rep2')}</p>
+                                                    <p>🤝 {t('chat.rep3')}</p>
+                                                </div>
 
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowRating(false)}
-                                className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition"
-                            >
-                                Annuler
-                            </button>
+                                                                className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition"
+                                                            >
+                                                                {t('chat.cancel')}
+                                                            </button>
                             <button
                                 onClick={handleComplete}
                                 disabled={completing || rating === 0}
                                 className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition"
                             >
                                 {completing ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        Envoi...
-                                    </span>
-                                ) : 'Valider ✅'}
+                                                                    <span className="flex items-center justify-center gap-2">
+                                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                                        {t('chat.sending')}
+                                                                    </span>
+                                                                ) : `${t('chat.validate')} ✅`}
                             </button>
                         </div>
                     </div>

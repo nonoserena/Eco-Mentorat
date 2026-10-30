@@ -4,6 +4,12 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import { getRequests, acceptRequest, getMyRequests } from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import { formatNumber } from '../../utils/format';
+
+const getSocketURL = () => {
+  if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return window.location.origin;
+  return 'http://localhost:5000';
+};
 
 export default function Home() {
     const { t, i18n } = useTranslation();
@@ -18,22 +24,28 @@ export default function Home() {
     const [total, setTotal]           = useState(0);
     const pollingRef = useRef(null);
 
-    const fetchRequests = async () => {
-                setLoading(true);
-                try {
-                    const lang = user?.preferredLang || i18n.language || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
-                    const res = await getRequests(page, 10, lang);
-                    setRequests(res.data.requests);
-                    setTotalPages(res.data.totalPages);
-                    setTotal(res.data.total);
-                } catch {
-                    setError(t('home.empty'));
-                } finally {
-                    setLoading(false);
-                }
-            };
+    const lang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+        const fetchRequests = async (silent = false) => {
+                    if (!silent) setLoading(true);
+                    try {
+                        const l = user?.preferredLang || i18n.language || JSON.parse(localStorage.getItem('user') || '{}')?.preferredLang || 'fr';
+                        const res = await getRequests(page, 10, l);
+                        setRequests(res.data.requests);
+                        setTotalPages(res.data.totalPages);
+                        setTotal(res.data.total);
+                    } catch {
+                        if (!silent) setError(t('home.empty'));
+                    } finally {
+                        if (!silent) setLoading(false);
+                    }
+                };
 
-            useEffect(() => { fetchRequests(); }, [page, user?.preferredLang, i18n.language]);
+                useEffect(() => { fetchRequests(); }, [page, user?.preferredLang, i18n.language]);
+        useEffect(() => {
+            const onFeed = () => { fetchRequests(true); };
+            window.addEventListener('eco-feed-refresh', onFeed);
+            return () => window.removeEventListener('eco-feed-refresh', onFeed);
+        }, [page, user?.preferredLang, i18n.language]);
 
     // FIX : Polling utilise getMyRequests pour détecter les demandes in-progress
     useEffect(() => {
@@ -94,13 +106,25 @@ export default function Home() {
         return styles[tag] || 'bg-gray-100 text-gray-600 border-gray-200';
     };
 
-    const getTimeAgo = (date) => {
-            const diff = Math.floor((Date.now() - new Date(date)) / 1000);
-            if (diff < 60)    return t('home.justNow');
-            if (diff < 3600)  return t('home.minutesAgo', { count: Math.floor(diff / 60) });
-            if (diff < 86400) return t('home.hoursAgo', { count: Math.floor(diff / 3600) });
-            return t('home.daysAgo', { count: Math.floor(diff / 86400) });
-        };
+    const fmtCount = (key, n) => {
+                try {
+                    const raw = t(key, { count: n });
+                    return String(raw).replace(String(n), formatNumber(n, lang));
+                } catch { return t(key, { count: n }); }
+            };
+        const getTimeAgo = (date) => {
+                const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+                if (diff < 60)    return t('home.justNow');
+                if (diff < 3600)  return fmtCount('home.minutesAgo', Math.floor(diff / 60));
+                if (diff < 86400) return fmtCount('home.hoursAgo', Math.floor(diff / 3600));
+                return fmtCount('home.daysAgo', Math.floor(diff / 86400));
+            };
+        const subtitleText = (() => {
+                try {
+                    const raw = t('home.subtitle', { count: total });
+                    return String(raw).replace(String(total), formatNumber(total, lang));
+                } catch { return t('home.subtitle', { count: total }); }
+            })();
 
     return (
         <DashboardLayout>
@@ -109,8 +133,8 @@ export default function Home() {
                 <div>
                                     <h1 className="text-2xl font-bold text-gray-800">{t('home.title')} 📋</h1>
                                     <p className="text-gray-500 text-sm mt-1">
-                                        {t('home.subtitle', { count: total })}
-                                    </p>
+                                                                            {subtitleText}
+                                                                        </p>
                                 </div>
                                 <button
                                     onClick={() => navigate('/create-request')}
@@ -122,11 +146,11 @@ export default function Home() {
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-                {[
-                                    { icon: '📋', label: t('home.activeDemands'), value: total },
-                                    { icon: '⚡', label: t('home.myXp'),           value: `${user?.xpPoints ?? 0} XP` },
-                                    { icon: '🎖️', label: t('home.myRank'),        value: user?.rankTitle || 'Novice' },
-                                ].map((stat, i) => (
+                            {[
+                                                { icon: '📋', label: t('home.activeDemands'), value: formatNumber(total, lang) },
+                                                { icon: '⚡', label: t('home.myXp'),           value: `${formatNumber(user?.xpPoints ?? 0, lang)} XP` },
+                                                { icon: '🎖️', label: t('home.myRank'),        value: user?.rankTitle || 'Novice' },
+                                            ].map((stat, i) => (
                     <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">
                             {stat.icon}
@@ -256,8 +280,8 @@ export default function Home() {
                         ← {t('common.previous')}
                     </button>
                     <span className="text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200">
-                        Page {page} / {totalPages}
-                    </span>
+                                            {t('common.page')} {formatNumber(page, lang)} / {formatNumber(totalPages, lang)}
+                                        </span>
                     <button
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}

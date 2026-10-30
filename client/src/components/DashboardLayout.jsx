@@ -13,11 +13,11 @@ const getSocketURL = () => { if (typeof window !== 'undefined' && (window.locati
 const SOCKET_URL = getSocketURL();
 
 const NAV_KEYS = [
-    { path: '/home', icon: 'ðŸ ', key: 'nav.home' },
-    { path: '/create-request', icon: 'âœ‹', key: 'nav.create' },
-    { path: '/leaderboard', icon: 'ðŸ†', key: 'nav.leaderboard' },
-    { path: '/history', icon: 'ðŸ“œ', key: 'nav.history' },
-    { path: '/profile', icon: 'ðŸ‘¤', key: 'nav.profile' },
+    { path: '/home', icon: '🏠', key: 'nav.home' },
+    { path: '/create-request', icon: '✋', key: 'nav.create' },
+    { path: '/leaderboard', icon: '🏆', key: 'nav.leaderboard' },
+    { path: '/history', icon: '📜', key: 'nav.history' },
+    { path: '/profile', icon: '👤', key: 'nav.profile' },
 ];
 
 export default function DashboardLayout({ children }) {
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }) {
                     <div className="mt-3 px-3">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-blue-300 text-xs">{t('profile.totalXp')}</span>
-                            <span className="text-white text-xs font-bold">âš¡ {formatNumber(user?.xpPoints ?? 0, lang)}</span>
+                            <span className="text-white text-xs font-bold">⚡ {formatNumber(user?.xpPoints ?? 0, lang)}</span>
                         </div>
                         <div className="w-full bg-blue-800 rounded-full h-1.5">
                             <div
@@ -199,7 +199,7 @@ export default function DashboardLayout({ children }) {
                 {/* HEADER */}
                 <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 sticky top-0 z-30 shadow-sm">
                     <div className="flex-1 max-w-lg relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ðŸ”</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                         <input
                             type="text"
                             value={searchQuery}
@@ -214,7 +214,7 @@ export default function DashboardLayout({ children }) {
                                          className="w-9 h-9 flex items-center justify-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition"
                                           title={isDark ? 'Mode clair' : 'Mode sombre'}
                                         >
-                                            {isDark ? 'â˜€ï¸' : 'ðŸŒ™'}
+                                            {isDark ? '☀️' : '🌙'}
                                         </button>
                                         <LanguageSwitcher compact />
                                         <div className="flex items-center gap-3 ml-auto">
@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }) {
                                 onClick={() => setShowNotifs(!showNotifs)}
                                 className="relative w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-xl transition"
                             >
-                                <span className="text-lg">ðŸ””</span>
+                                <span className="text-lg">🔔</span>
                                 {unreadCount > 0 && (
                                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -250,7 +250,7 @@ export default function DashboardLayout({ children }) {
 
                                     {notifications.length === 0 ? (
                                         <div className="py-8 text-center text-gray-400 text-sm">
-                                                                                    <p className="text-2xl mb-2">ðŸ”•</p>
+                                                                                    <p className="text-2xl mb-2">🔕</p>
                                                                                     <p>{t('dashboard.noNotif')}</p>
                                                                                 </div>
                                     ) : (

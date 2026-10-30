@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
+    const { t } = useTranslation();
     const { login }  = useAuth();
     const navigate   = useNavigate();
 
@@ -123,8 +125,8 @@ export default function Login() {
                     {/* Card formulaire */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800">Bon retour ! 👋</h2>
-                            <p className="text-gray-500 text-sm mt-1">Connecte-toi pour continuer à apprendre et enseigner.</p>
+                            <h2 className="text-2xl font-bold text-gray-800">{t('login.welcome')} 👋</h2>
+                            <p className="text-gray-500 text-sm mt-1">{t('login.subtitle')}</p>
                         </div>
 
                         {/* Erreur */}
@@ -138,7 +140,7 @@ export default function Login() {
                             {/* Email */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Email académique
+                                    {t('auth.email')}
                                 </label>
                                 <input
                                     type="email"
@@ -151,10 +153,10 @@ export default function Login() {
                                 />
                             </div>
 
-                            {/* Mot de passe */}
+                            {/* {t('auth.password')} */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Mot de passe
+                                    {t('auth.password')}
                                 </label>
                                 <input
                                     type="password"
@@ -176,11 +178,11 @@ export default function Login() {
                                 {loading ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        Connexion...
+                                        {t('login.connecting')}
                                     </>
                                 ) : (
-                                    'Se connecter →'
-                                )}
+                                                                    t('login.connectBtn')
+                                                                )}
                             </button>
                         </form>
 
@@ -193,16 +195,16 @@ export default function Login() {
 
                         {/* Lien inscription */}
                         <p className="text-center text-sm text-gray-500">
-                            Pas encore de compte ?{' '}
+                            {t('login.noAccount')}
                             <Link to="/register" className="text-violet-600 font-semibold hover:underline">
-                                Rejoindre la communauté
+                                {t('login.join')}
                             </Link>
                         </p>
                     </div>
 
                     {/* Footer */}
                     <p className="text-center text-xs text-gray-400 mt-6">
-                        Eco-Mentorat est 100% gratuit · Sécurisé · Anti-triche
+                        {t('login.tagline')}
                     </p>
                 </div>
             </div>

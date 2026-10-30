@@ -148,7 +148,7 @@ export default function Register() {
                 </svg>
 
                 <h1 className="text-4xl font-bold text-white text-center mb-3">
-                    Rejoins la communauté !
+                    {t('register.join')}
                 </h1>
                 <p className="text-blue-100 text-center text-base leading-relaxed max-w-xs">
                     Partage tes super-pouvoirs académiques et aide tes camarades à progresser.
@@ -158,7 +158,7 @@ export default function Register() {
                 <div className="flex gap-6 mt-8">
                     {[
                         { num: '1', label: 'Ton profil' },
-                        { num: '2', label: 'Tes super-pouvoirs' },
+                        { num: '2', label: t('register.powers') },
                         { num: '3', label: 'C\'est parti !' },
                     ].map((s, i) => (
                         <div key={i} className="text-center">
@@ -193,8 +193,8 @@ export default function Register() {
                                         Étape 1/2
                                     </span>
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-800 mt-2">Crée ton profil</h2>
-                                <p className="text-gray-500 text-sm mt-1">Quelques infos pour commencer.</p>
+                                <h2 className="text-2xl font-bold text-gray-800 mt-2">{t('register.createTitle')}</h2>
+                                <p className="text-gray-500 text-sm mt-1">{t('register.createSub')}</p>
                             </div>
 
                             {error && (
@@ -206,7 +206,7 @@ export default function Register() {
                             <form onSubmit={handleStep1} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Nom d'utilisateur
+                                        {t('register.username')}
                                     </label>
                                     <input
                                         type="text"
@@ -309,7 +309,7 @@ export default function Register() {
                                     type="submit"
                                     className="w-full bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white font-semibold py-3 rounded-xl transition shadow-md mt-2"
                                 >
-                                    Continuer → Mes super-pouvoirs
+                                    {t('register.continue')} → Mes super-pouvoirs
                                 </button>
                             </form>
 
@@ -331,7 +331,7 @@ export default function Register() {
                                         Étape 2/2
                                     </span>
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-800 mt-2">Tes super-pouvoirs 🦸</h2>
+                                <h2 className="text-2xl font-bold text-gray-800 mt-2">{t('register.powers')} 🦸</h2>
                                 <p className="text-gray-500 text-sm mt-1">
                                     Dans quelles matières es-tu fort et prêt à aider tes camarades ?
                                     <span className="text-gray-400"> (max 5)</span>
@@ -437,11 +437,11 @@ export default function Register() {
                                     {loading ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            Création...
+                                            {t('register.creating')}
                                         </span>
                                     ) : (
-                                        "Créer mon compte 🚀"
-                                    )}
+                                                                            t('register.createBtn')
+                                                                        )}
                                 </button>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import logoEco from '../assets/logo-eco.svg';
 
 const FEATURES = [
@@ -87,6 +88,7 @@ const TESTIMONIALS = [
 ];
 
 export default function Landing() {
+    const { t } = useTranslation();
     const { isDark, toggleTheme } = useTheme();
 
     return (
@@ -119,13 +121,13 @@ export default function Landing() {
                             to="/login"
                             className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-900 dark:hover:text-white transition px-3 py-2"
                         >
-                            Se connecter
+                            {t('landing.login')}
                         </Link>
                         <Link
                             to="/register"
                             className="text-sm font-semibold bg-gradient-to-r from-blue-900 to-violet-600 text-white px-4 py-2 rounded-xl hover:from-blue-800 hover:to-violet-500 transition shadow-md"
                         >
-                            Commencer gratuitement
+                            {t('landing.startFree')}
                         </Link>
                     </div>
                 </div>
@@ -144,18 +146,16 @@ export default function Landing() {
 
                                         {/* Titre */}
                                         <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 dark:text-white mb-6 leading-[1.05]">
-                                            L'entraide étudiante
+                                            {t('landing.title1')}
                                             <br />
                                             <span className="text-gradient-eco-meta">
-                                                sans frontières de langue
+                                                {t('landing.title2')}
                                             </span>
                                         </h1>
 
                                         {/* Sous-titre */}
                                         <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-                                            Tu publies en français, ton mentor lit en japonais. Vous discutez chacun dans votre langue.
-                                            L'IA Meta traduit et soigne le contexte pédagogique. Même en 3G lente.
-                                        </p>
+                                            {t('landing.heroSub')}</p>
 
                                         {/* Démo live FR -> JA */}
                                         <div className="max-w-xl mx-auto mb-10 grid gap-3 text-left">
@@ -175,13 +175,13 @@ export default function Landing() {
                             to="/register"
                             className="w-full sm:w-auto bg-gradient-eco-meta text-white font-bold px-8 py-4 rounded-xl transition shadow-lg text-base"
                         >
-                            Rejoindre la communauté 🚀
+                            {t('landing.ctaJoin')} 🚀
                         </Link>
                         <Link
                             to="/login"
                             className="w-full sm:w-auto border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 font-semibold px-8 py-4 rounded-xl transition text-base"
                         >
-                            J'ai déjà un compte →
+                            {t('landing.ctaHaveAccount')}
                         </Link>
                     </div>
 
@@ -209,7 +209,7 @@ export default function Landing() {
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-14">
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            Tout ce dont tu as besoin
+                            {t('landing.featTitle')}
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
                             Eco-Mentorat réunit toutes les fonctionnalités pour une entraide académique efficace, équitable et sécurisée.
@@ -242,7 +242,7 @@ export default function Landing() {
                 <div className="max-w-5xl mx-auto">
                     <div className="text-center mb-14">
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            Comment ça marche ?
+                            {t('landing.howTitle')}
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
                             En 4 étapes simples, passe du blocage à la compréhension.
@@ -294,7 +294,7 @@ export default function Landing() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {TESTIMONIALS.map((t, i) => (
+                        {TESTIMONIALS.map((item, i) => (
                             <div
                                 key={i}
                                 className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm"
@@ -304,17 +304,17 @@ export default function Landing() {
 
                                 {/* Texte */}
                                 <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-5 italic">
-                                    "{t.text}"
+                                    "{item.text}"
                                 </p>
 
                                 {/* Auteur */}
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white font-bold text-sm`}>
-                                        {t.avatar}
+                                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white font-bold text-sm`}>
+                                        {item.avatar}
                                     </div>
                                     <div>
-                                        <p className="text-gray-900 dark:text-white font-semibold text-sm">{t.name}</p>
-                                        <p className="text-gray-400 text-xs">{t.role}</p>
+                                        <p className="text-gray-900 dark:text-white font-semibold text-sm">{item.name}</p>
+                                        <p className="text-gray-400 text-xs">{item.role}</p>
                                     </div>
                                 </div>
                             </div>
@@ -332,24 +332,22 @@ export default function Landing() {
                         <div className="absolute bottom-[-30px] left-[-30px] w-32 h-32 bg-white/5 rounded-full"></div>
 
                         <h2 className="text-3xl font-bold text-white mb-4 relative z-10">
-                            Prêt à rejoindre la communauté ?
+                            {t('landing.ctaFinalTitle')}
                         </h2>
                         <p className="text-blue-100 mb-8 relative z-10 leading-relaxed">
-                            Des milliers d'étudiants s'entraident déjà sur Eco-Mentorat.
-                            Rejoins-les gratuitement et commence à apprendre autrement.
-                        </p>
+                            {t('landing.ctaFinalSub')}</p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
                             <Link
                                 to="/register"
                                 className="w-full sm:w-auto bg-white text-blue-900 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg text-base"
                             >
-                                Créer mon compte gratuitement 🚀
+                                {t('landing.ctaCreate')} 🚀
                             </Link>
                             <Link
                                 to="/login"
                                 className="w-full sm:w-auto border-2 border-white/30 text-white font-semibold px-8 py-4 rounded-xl hover:border-white/60 transition text-base"
                             >
-                                Se connecter →
+                                {t('landing.login')} →
                             </Link>
                         </div>
                     </div>
@@ -369,7 +367,7 @@ export default function Landing() {
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-400">
                         <Link to="/register" className="hover:text-gray-600 dark:hover:text-gray-300 transition">S'inscrire</Link>
-                        <Link to="/login" className="hover:text-gray-600 dark:hover:text-gray-300 transition">Se connecter</Link>
+                        <Link to="/login" className="hover:text-gray-600 dark:hover:text-gray-300 transition">{t('landing.login')}</Link>
                     </div>
                 </div>
             </footer>

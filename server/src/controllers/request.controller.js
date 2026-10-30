@@ -12,6 +12,8 @@ class RequestController {
                 socketManager
             );
 
+            try { socketManager?.broadcastFeedUpdate?.('created', { id: result?.request?._id }); } catch {}
+
             res.status(201).json({
                 status: 'success',
                 message: 'Demande publiée avec succès !',

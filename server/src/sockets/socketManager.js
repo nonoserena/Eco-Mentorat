@@ -214,7 +214,22 @@ class SocketManager {
 
             if (isConnected) count++;
         });
+        // P01-FIX temps réel Home : broadcast global pour que le feed JP/FR/BR se mette à jour sans refresh
+        try {
+          this.io.emit('feed_new_request', {
+            id: newRequest._id,
+            title: newRequest.title,
+            description: newRequest.description,
+            skillTag: tagStd,
+            sourceLang: newRequest.sourceLang || 'fr',
+            createdAt: newRequest.createdAt || new Date().toISOString(),
+          });
+        } catch {}
         return count;
+    }
+
+    broadcastFeedUpdate(type, payload = {}) {
+        try { this.io.emit('feed_updated', { type, ...payload, at: new Date().toISOString() }); } catch {}
     }
 }
 

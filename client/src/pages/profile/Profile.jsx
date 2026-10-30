@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { formatNumber } from '../../utils/format';
 import { getPortfolio, getMyProfile, updateMyLang } from '../../services/api';
 
 const getRankStyle = (rank) => {
@@ -27,11 +29,11 @@ const getXPProgress = (xp) => {
 };
 
 const RANK_MILESTONES = [
-    { title: 'Novice',   xp: 0,    emoji: 'ðŸŒ±' },
-    { title: 'Apprenti', xp: 200,  emoji: 'ðŸ“š' },
-    { title: 'Confirme', xp: 800,  emoji: 'ðŸ’¡' },
-    { title: 'Expert',   xp: 2000, emoji: 'ðŸ†' },
-    { title: 'Legende',  xp: 5000, emoji: 'ðŸŒŸ' },
+    { title: 'Novice',   xp: 0,    emoji: '🌱' },
+    { title: 'Apprenti', xp: 200,  emoji: '📚' },
+    { title: 'Confirme', xp: 800,  emoji: '💡' },
+    { title: 'Expert',   xp: 2000, emoji: '🏆' },
+    { title: 'Legende',  xp: 5000, emoji: '🌟' },
 ];
 
 const TAG_COLORS = {
@@ -46,6 +48,7 @@ const TAG_COLORS = {
 };
 
 export default function Profile() {
+    const { t, i18n } = useTranslation();
     const { user, updateUser }      = useAuth();
     const [downloading, setDownloading] = useState(false);
     const [freshData, setFreshData] = useState(null);
@@ -54,7 +57,7 @@ export default function Profile() {
     const rankStyle  = getRankStyle(user?.rankTitle);
     const xpProgress = getXPProgress(user?.xpPoints ?? 0);
 
-    // FIX: charger les donnÃ©es fraÃ®ches du profil au montage
+    // FIX: charger les données fraîches du profil au montage
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -71,6 +74,7 @@ export default function Profile() {
     }, []);
 
     const profileData = freshData || user;
+    const lang = (profileData?.preferredLang || user?.preferredLang || i18n.language || 'fr').slice(0,2);
 
     const handleDownloadPDF = async () => {
         setDownloading(true);
@@ -85,8 +89,8 @@ export default function Profile() {
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch {
-            alert('Erreur lors du tÃ©lÃ©chargement du portfolio.');
-        } finally {
+                    alert(t('profile.downloadErr'));
+                } finally {
             setDownloading(false);
         }
     };
@@ -111,8 +115,8 @@ export default function Profile() {
 
                 {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">Mon Profil ðŸ‘¤</h1>
-                    <p className="text-gray-500 text-sm mt-1">Tes statistiques et ton parcours acadÃ©mique</p>
+                    <h1 className="text-2xl font-bold text-gray-800">{t('profile.title')} 👤</h1>
+                    <p className="text-gray-500 text-sm mt-1">{t('profile.subtitle')}</p>
                 </div>
 
                 {loading ? (
@@ -129,7 +133,7 @@ export default function Profile() {
                                         {profileData?.username?.charAt(0).toUpperCase()}
                                     </div>
                                     <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm ${rankStyle.bg} shadow-sm border-2 border-white`}>
-                                        {RANK_MILESTONES.find(r => r.title === profileData?.rankTitle)?.emoji || 'ðŸŒ±'}
+                                        {RANK_MILESTONES.find(r => r.title === profileData?.rankTitle)?.emoji || '🌱'}
                                     </div>
                                 </div>
 
@@ -142,23 +146,23 @@ export default function Profile() {
                                     </div>
                                     <p className="text-gray-500 text-sm mb-3">{profileData?.email}</p>
                                     <div className="flex items-center gap-2 mb-3">
-                                      <span className="text-xs text-gray-500">ðŸŒ Langue pays :</span>
-                                      <select value={profileData?.preferredLang || 'fr'} onChange={async (e) => { try { const res = await updateMyLang(e.target.value); updateUser(res.data.user); setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang })); localStorage.setItem('user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('user') || '{}')), preferredLang: res.data.user.preferredLang })); } catch { alert('Changement de langue impossible.'); } }} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-400">
-                                        <option value="fr">ðŸ‡«ðŸ‡· FranÃ§ais</option>
-                                        <option value="ja">ðŸ‡¯ðŸ‡µ æ—¥æœ¬èªž</option>
-                                        <option value="ar">ðŸ‡²ðŸ‡¦ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©</option>
-                                        <option value="pt">ðŸ‡§ðŸ‡· PortuguÃªs</option>
-                                        <option value="en">ðŸ‡¬ðŸ‡§ English</option>
-                                        <option value="es">ðŸ‡ªðŸ‡¸ EspaÃ±ol</option>
-                                        <option value="wo">ðŸ‡¸ðŸ‡³ Wolof</option>
-                                        <option value="zh">ðŸ‡¨ðŸ‡³ ä¸­æ–‡</option>
+                                      <span className="text-xs text-gray-500">🌍 {t('profile.countryLang')}</span>
+                                      <select value={profileData?.preferredLang || 'fr'} onChange={async (e) => { try { const res = await updateMyLang(e.target.value); updateUser(res.data.user); setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang })); localStorage.setItem('user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('user') || '{}')), preferredLang: res.data.user.preferredLang })); } catch { alert(t('profile.langErr')); } }} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-400">
+                                        <option value="fr">FR Francais</option>
+                                        <option value="ja">JA Japonais</option>
+                                        <option value="ar">AR Arabe</option>
+                                        <option value="pt">PT Portugues</option>
+                                        <option value="en">EN English</option>
+                                        <option value="es">ES Espanol</option>
+                                        <option value="wo">WO Wolof</option>
+                                        <option value="zh">ZH Chinois</option>
                                       </select>
-                                      <span className="text-[11px] text-gray-400">Feed traduit auto via Muse</span>
+                                      <span className="text-[11px] text-gray-400">{t('profile.feedAuto')}</span>
                                     </div>
                                     <div>
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-xs text-gray-500">Progression XP</span>
-                                            <span className="text-xs font-bold text-blue-900">âš¡ {profileData?.xpPoints ?? 0} XP</span>
+                                            <span className="text-xs text-gray-500">{t('profile.xpProgress')}</span>
+                                            <span className="text-xs font-bold text-blue-900">⚡ {formatNumber(profileData?.xpPoints ?? 0, lang)} XP</span>
                                         </div>
                                         <div className="w-full bg-gray-100 rounded-full h-2">
                                             <div
@@ -166,7 +170,7 @@ export default function Profile() {
                                                 style={{ width: `${xpProgress}%` }}
                                             ></div>
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-1">{xpProgress}% vers le prochain grade</p>
+                                        <p className="text-xs text-gray-400 mt-1">{xpProgress}% {t('profile.towardsNext')}</p>
                                     </div>
                                 </div>
 
@@ -175,9 +179,9 @@ export default function Profile() {
                                     disabled={downloading}
                                     className="flex-shrink-0 flex flex-col items-center gap-1 bg-gradient-to-r from-blue-900 to-violet-600 hover:from-blue-800 hover:to-violet-500 text-white px-5 py-3 rounded-xl transition shadow-md disabled:opacity-60"
                                 >
-                                    <span className="text-xl">ðŸ“„</span>
+                                    <span className="text-xl">📄</span>
                                     <span className="text-xs font-semibold whitespace-nowrap">
-                                        {downloading ? 'GÃ©nÃ©ration...' : 'Mon Portfolio'}
+                                        {downloading ? t('profile.generating') : t('profile.portfolio')}
                                     </span>
                                 </button>
                             </div>
@@ -186,9 +190,9 @@ export default function Profile() {
                         {/* Stats */}
                         <div className="grid grid-cols-3 gap-4 mb-5">
                             {[
-                                { icon: 'âš¡', label: 'XP Total',     value: profileData?.xpPoints ?? 0,                 sub: "points d'expÃ©rience" },
-                                { icon: 'ðŸ§ ', label: 'CompÃ©tences',  value: profileData?.skillsDeclarated?.length ?? 0, sub: 'matiÃ¨res dÃ©clarÃ©es' },
-                                { icon: 'ðŸŽ–ï¸', label: 'Grade actuel', value: profileData?.rankTitle || 'Novice',          sub: 'niveau atteint' },
+                                { icon: '⚡', label: t('profile.xpTotal'),     value: formatNumber(profileData?.xpPoints ?? 0, lang), sub: t('profile.xpSub') },
+                                { icon: '🧠', label: t('profile.skillsLabel'),  value: formatNumber(profileData?.skillsDeclarated?.length ?? 0, lang), sub: t('profile.skillsSub') },
+                                                                { icon: '🎖️', label: t('profile.rankLabel'), value: profileData?.rankTitle || 'Novice',          sub: t('profile.rankSub') },
                             ].map((stat, i) => (
                                 <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                                     <div className="flex items-center gap-3 mb-2">
@@ -202,9 +206,9 @@ export default function Profile() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-5 mb-5">
-                            {/* CompÃ©tences */}
+                            {/* Compétences */}
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-4">Mes super-pouvoirs ðŸ¦¸</h3>
+                                <h3 className="text-base font-semibold text-gray-800 mb-4">{t('profile.myPowers')} 🦸</h3>
                                 {profileData?.skillsDeclarated?.length > 0 ? (
                                     <div className="flex flex-wrap gap-2">
                                         {profileData.skillsDeclarated.map(skill => (
@@ -217,13 +221,13 @@ export default function Profile() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-gray-400 text-sm">Aucune compÃ©tence dÃ©clarÃ©e.</p>
+                                    <p className="text-gray-400 text-sm">{t('profile.noSkill')}</p>
                                 )}
                             </div>
 
-                            {/* Parcours des grades */}
+                            {/* {t('profile.rankJourney')} */}
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-4">Parcours des grades ðŸŽ¯</h3>
+                                <h3 className="text-base font-semibold text-gray-800 mb-4">{t('profile.rankJourney')} 🎯</h3>
                                 <div className="space-y-3">
                                     {RANK_MILESTONES.map((milestone, i) => {
                                         const reached  = (profileData?.xpPoints ?? 0) >= milestone.xp;
@@ -248,7 +252,7 @@ export default function Profile() {
                                                         <span className="text-xs text-gray-400">{milestone.xp} XP</span>
                                                     </div>
                                                 </div>
-                                                {reached && <span className="text-green-500 text-sm">âœ“</span>}
+                                                {reached && <span className="text-green-500 text-sm">✓</span>}
                                             </div>
                                         );
                                     })}
@@ -256,23 +260,23 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* âœ… NOUVELLE SECTION : RÃ©putation par matiÃ¨re */}
+                        {/* âœ… NOUVELLE SECTION : Réputation par matière */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <h3 className="text-base font-semibold text-gray-800 mb-1">
-                                Mes scores de rÃ©putation par matiÃ¨re â­
+                                {t('profile.reputation')} ⭐
                             </h3>
                             <p className="text-gray-400 text-xs mb-5">
-                                CalculÃ©s Ã  partir de tes sessions d'entraide validÃ©es
+                                {t('profile.repHint')}
                             </p>
 
                             {!profileData?.skillsMetrics || profileData.skillsMetrics.length === 0 ? (
                                 <div className="text-center py-8">
-                                    <p className="text-3xl mb-2">ðŸŽ“</p>
+                                    <p className="text-3xl mb-2">🎓</p>
                                     <p className="text-gray-400 text-sm">
-                                        Aucune session validÃ©e pour le moment.
+                                        {t('profile.noSession')}
                                     </p>
                                     <p className="text-gray-300 text-xs mt-1">
-                                        Aide un camarade pour voir apparaÃ®tre tes scores !
+                                        {t('profile.helpFriend')}
                                     </p>
                                 </div>
                             ) : (
@@ -291,7 +295,7 @@ export default function Profile() {
                                                             {metric.skillTag}
                                                         </span>
                                                         <span className="text-gray-400 text-xs">
-                                                            {sessionsReelles} session{sessionsReelles > 1 ? 's' : ''} complÃ©tÃ©e{sessionsReelles > 1 ? 's' : ''}
+                                                            {sessionsReelles} session{sessionsReelles > 1 ? 's' : ''} complétée{sessionsReelles > 1 ? 's' : ''}
                                                         </span>
                                                     </div>
                                                     <span className={`text-xl font-bold ${getReputationColor(metric.reputationScore)}`}>
@@ -299,10 +303,10 @@ export default function Profile() {
                                                     </span>
                                                 </div>
 
-                                                {/* Barre de rÃ©putation globale */}
+                                                {/* Barre de réputation globale */}
                                                 <div className="mb-3">
                                                     <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                        <span>Score de rÃ©putation</span>
+                                                        <span>{t('profile.repScore')}</span>
                                                         <span>{metric.reputationScore}/5.0</span>
                                                     </div>
                                                     <div className="w-full bg-gray-100 rounded-full h-2">
@@ -313,11 +317,11 @@ export default function Profile() {
                                                     </div>
                                                 </div>
 
-                                                {/* DÃ©tails des 3 facteurs */}
+                                                {/* Détails des 3 facteurs */}
                                                 <div className="grid grid-cols-3 gap-3 mt-3">
-                                                    {/* PÃ©dagogie */}
+                                                    {/* Pédagogie */}
                                                     <div className="text-center bg-blue-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">ðŸŽ¯ PÃ©dagogie</p>
+                                                        <p className="text-xs text-gray-500 mb-1">🎯 Pédagogie</p>
                                                         <p className="text-sm font-bold text-blue-700">
                                                             {metric.helpCount > 0
                                                                 ? (metric.totalStars / metric.helpCount).toFixed(1)
@@ -326,20 +330,20 @@ export default function Profile() {
                                                         <p className="text-xs text-gray-400">20%</p>
                                                     </div>
 
-                                                    {/* SÃ©rieux */}
+                                                    {/* Sérieux */}
                                                     <div className="text-center bg-green-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">ðŸ’ª SÃ©rieux</p>
+                                                        <p className="text-xs text-gray-500 mb-1">💪 Sérieux</p>
                                                         <p className="text-sm font-bold text-green-700">
                                                             {tauxSerieux}%
                                                         </p>
                                                         <p className="text-xs text-gray-400">60%</p>
                                                     </div>
 
-                                                    {/* DiversitÃ© */}
+                                                    {/* Diversité */}
                                                     <div className="text-center bg-purple-50 rounded-lg p-2">
-                                                        <p className="text-xs text-gray-500 mb-1">ðŸ¤ DiversitÃ©</p>
+                                                        <p className="text-xs text-gray-500 mb-1">🤝 Diversité</p>
                                                         <p className="text-sm font-bold text-purple-700">
-                                                            {metric.uniqueUsersHelped?.length ?? 0} Ã©tud.
+                                                            {metric.uniqueUsersHelped?.length ?? 0} étud.
                                                         </p>
                                                         <p className="text-xs text-gray-400">20%</p>
                                                     </div>
