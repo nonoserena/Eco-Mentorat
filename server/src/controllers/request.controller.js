@@ -114,12 +114,33 @@ class RequestController {
         try {
             const { requestId, rating } = req.body;
             const requesterId = req.user.id;
+            const socketManager = req.app.get('socketManager');
             const result = await RequestService.completeRequest(requestId, requesterId, parseInt(rating));
+
+            // Notifie en temps réel toute la room (apprenant et mentor)
+            try {
+                if (socketManager?.io) {
+                    socketManager.io.to(requestId.toString()).emit('session_ended', {
+                        requestId,
+                        rating: parseInt(rating),
+                        xpGained: result.xpGained,
+                        newSkillReputation: result.newSkillReputation,
+                        mentorId: result.mentorId?.toString(),
+                        newXpPoints: result.newXpPoints,
+                        newRankTitle: result.newRankTitle,
+                        message: "La session a été clôturée par l'apprenant."
+                    });
+                }
+            } catch (sockErr) {
+                console.warn('[SOCKET] Échec notification session_ended:', sockErr.message);
+            }
+
             res.status(200).json({
+                status: 'success',
                 message: result.appliquerPoidsNormal
                     ? 'Entraide validée avec succès !'
                     : 'Avis enregistré. Système anti-spam actif.',
-                newSkillReputation: result.newSkillReputation
+                ...result
             });
         } catch (err) {
             next(err);

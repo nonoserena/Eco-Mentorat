@@ -304,7 +304,8 @@ class RequestService {
         metric.reputationScore = calculerScorePondere(metric);
 
         // Attribution d'XP et régénération de ticket
-        mentor.xpPoints += appliquerPoidsNormal ? (50 + rating * 10) : 10;
+        const xpGained = appliquerPoidsNormal ? (50 + rating * 10) : 10;
+        mentor.xpPoints += xpGained;
         mentor.requestsLeft = Math.min(10, mentor.requestsLeft + 1);
         await mentor.save();
 
@@ -315,6 +316,11 @@ class RequestService {
         return {
             appliquerPoidsNormal,
             newSkillReputation: metric.reputationScore,
+            xpGained,
+            mentorId: mentor._id,
+            mentorUsername: mentor.username,
+            newXpPoints: mentor.xpPoints,
+            newRankTitle: mentor.rankTitle,
             request
         };
     }

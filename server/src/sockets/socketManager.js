@@ -125,6 +125,7 @@ class SocketManager {
                     }
 
                     // Fallback : diffusion originale (jamais bloquer le chat)
+                    const payloadTime = time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                     socket.to(requestId.toString()).emit('receive_message', {
                         id: savedMsg ? savedMsg._id : Date.now(),
                         content,
@@ -133,7 +134,15 @@ class SocketManager {
                         type: 'text',
                         isMe: false,
                         username,
-                        time: time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                        time: payloadTime
+                    });
+                    socket.emit('message_sent', {
+                        id: savedMsg ? savedMsg._id : Date.now(),
+                        content,
+                        content_translated: null,
+                        sourceLang: srcLang,
+                        type: 'text',
+                        time: payloadTime
                     });
                 } catch (err) {
                     console.warn(`[SOCKET ERROR] Échec envoi message : ${err.message}`);
@@ -159,6 +168,7 @@ class SocketManager {
                         });
                     }
 
+                    const payloadTime = time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                     socket.to(requestId.toString()).emit('receive_file', {
                         id: savedMsg ? savedMsg._id : Date.now(),
                         content: fileName,
@@ -166,7 +176,15 @@ class SocketManager {
                         url: fileUrl,
                         isMe: false,
                         username,
-                        time: time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                        time: payloadTime
+                    });
+                    socket.emit('file_sent', {
+                        id: savedMsg ? savedMsg._id : Date.now(),
+                        content: fileName,
+                        type: fileType,
+                        url: fileUrl,
+                        fileName,
+                        time: payloadTime
                     });
                 } catch (err) {
                     console.warn(`[SOCKET ERROR] Échec envoi fichier : ${err.message}`);
@@ -175,10 +193,16 @@ class SocketManager {
             });
 
             // Notification de fin de session
-            socket.on('session_completed', ({ requestId, newReputation }) => {
-                socket.to(requestId.toString()).emit('session_ended', {
+            socket.on('session_completed', ({ requestId, newReputation, newSkillReputation, xpGained, rating, mentorId, newXpPoints, newRankTitle }) => {
+                this.io.to(requestId.toString()).emit('session_ended', {
+                    requestId,
                     message: "La session a été clôturée par l'apprenant.",
-                    newReputation
+                    newSkillReputation: newSkillReputation || newReputation,
+                    xpGained,
+                    rating,
+                    mentorId,
+                    newXpPoints,
+                    newRankTitle
                 });
                 console.log(`[SOCKET] Session ${requestId} clôturée.`);
             });
