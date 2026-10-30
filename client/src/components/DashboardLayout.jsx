@@ -10,10 +10,7 @@ import Icon from './Icon';
 import { formatNumber, formatTime } from '../utils/format';
 
 const getSocketURL = () => {
-  if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) {
-    return window.location.origin;
-  }
-  return 'http://localhost:5000';
+  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000';
 };
 const SOCKET_URL = getSocketURL();
 
@@ -28,7 +25,7 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }) {
   const { t, i18n } = useTranslation();
   const { user, logout, updateUser } = useAuth();
-  const lang = user?.preferredLang || i18n.language || 'fr';
+  const lang = (i18n.language || user?.preferredLang || 'fr').slice(0, 2);
   const location = useLocation();
   const navigate = useNavigate();
   const socketRef = useRef(null);
@@ -65,7 +62,7 @@ export default function DashboardLayout({ children }) {
     socket.on('reconnect', registerUser);
 
     socket.on('new_request', (data) => {
-      const myLang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+      const myLang = (i18n.language || user?.preferredLang || 'fr').slice(0, 2);
       const newNotif = {
         id: Date.now(),
         message: data.message,
@@ -265,6 +262,20 @@ export default function DashboardLayout({ children }) {
           {children}
         </div>
       </main>
+
+      {/* ── BARRE DE NAVIGATION INFÉRIEURE MOBILE ── */}
+      <nav className="dash-bottom-nav">
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`dash-bottom-item ${isActive(item.path) ? 'is-active' : ''}`}
+          >
+            <Icon name={item.icon} size={19} />
+            <span>{t(item.key)}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

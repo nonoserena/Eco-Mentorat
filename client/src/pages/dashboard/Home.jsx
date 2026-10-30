@@ -20,12 +20,12 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const pollingRef = useRef(null);
 
-  const lang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+  const lang = (i18n.language || user?.preferredLang || 'fr').slice(0, 2);
 
   const fetchRequests = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const l = user?.preferredLang || i18n.language || 'fr';
+      const l = (i18n.language || user?.preferredLang || 'fr').slice(0, 2);
       const res = await getRequests(page, 10, l);
       setRequests(res.data.requests || []);
       setTotalPages(res.data.totalPages || 1);

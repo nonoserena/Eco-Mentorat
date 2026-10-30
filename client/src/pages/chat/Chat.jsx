@@ -9,10 +9,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 import Icon from '../../components/Icon';
 
 const getSocketURL = () => {
-  if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) {
-    return window.location.origin;
-  }
-  return 'http://localhost:5000';
+  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000';
 };
 const SOCKET_URL = getSocketURL();
 
@@ -21,7 +18,7 @@ export default function Chat() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { t, i18n } = useTranslation();
-  const lang = (currentUser?.preferredLang || i18n.language || 'fr').slice(0, 2);
+  const lang = (i18n.language || currentUser?.preferredLang || 'fr').slice(0, 2);
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -62,23 +59,24 @@ export default function Chat() {
         try {
           const histRes = await getChatHistory(requestId);
           if (histRes.data?.messages) {
-            const myLang = currentUser?.preferredLang || 'fr';
+            const myLang = lang;
             const mapped = histRes.data.messages.map((m) => {
-              let tr = m.content_translated || m.translated || null;
-              if (!tr && m.translations) {
-                tr = m.translations[myLang] || m.translations?.ja || m.translations?.fr || null;
+              const isMine = m.senderId?.toString() === myId;
+              let tr = null;
+              if (!isMine) {
+                tr = (m.translations && m.translations[myLang]) || m.content_translated || m.translated || null;
               }
               const isSenderApprenant = m.senderId?.toString() === req.requesterId?.toString();
               return {
                 id: m._id,
                 content: m.content,
                 content_translated: tr,
-                engine: m.engine || null,
+                engine: 'Meta Muse Spark',
                 sourceLang: m.sourceLang || null,
                 type: m.type || 'text',
                 url: m.fileUrl,
                 fileName: m.fileName,
-                isMe: m.senderId?.toString() === myId,
+                isMe: isMine,
                 username: m.senderUsername,
                 role: isSenderApprenant ? 'apprenant' : 'mentor',
                 time: formatTime(m.createdAt, lang),
@@ -116,11 +114,12 @@ export default function Chat() {
     });
 
     socket.on('receive_message', (msg) => {
+      const isMine = msg.userId?.toString() === currentUser.id?.toString();
       const isSenderApprenant = msg.userId?.toString() === requestData?.requesterId?.toString();
-      const myLang = (currentUser?.preferredLang || 'fr').slice(0, 2);
-      let translatedText = msg.content_translated;
-      if (!translatedText && msg.translations) {
-        translatedText = msg.translations[myLang] || msg.translations?.fr || null;
+      const myLang = lang;
+      let translatedText = null;
+      if (!isMine) {
+        translatedText = (msg.translations && msg.translations[myLang]) || msg.content_translated || null;
       }
 
       setMessages((prev) => {
@@ -133,21 +132,21 @@ export default function Chat() {
             id: msg.id || Date.now(),
             content: msg.content,
             content_translated: translatedText,
-            engine: msg.engine || null,
+            engine: 'Meta Muse Spark',
             sourceLang: msg.sourceLang || null,
             type: msg.type || 'text',
             url: msg.url,
             fileName: msg.fileName,
-            isMe: msg.userId?.toString() === currentUser.id?.toString(),
+            isMe: isMine,
             username: msg.username,
             role: isSenderApprenant ? 'apprenant' : 'mentor',
-            time: msg.time || formatTime(new Date(), lang),
+            time: formatTime(new Date(), lang),
           },
         ];
       });
     });
 
-    // Confirmation d'envoi pour l'émetteur (mise à jour avec ID serveur et traduction)
+    // Confirmation d'envoi pour l'émetteur (mise à jour de l'ID uniquement, sans modifier le texte affiché)
     socket.on('message_sent', (msg) => {
       setMessages((prev) =>
         prev.map((m) =>
@@ -155,13 +154,15 @@ export default function Chat() {
             ? {
                 ...m,
                 id: msg.id || m.id,
-                content_translated: msg.content_translated || m.content_translated,
-                engine: msg.engine || m.engine,
-                sourceLang: msg.sourceLang || m.sourceLang,
               }
             : m
         )
       );
+    });
+
+    socket.on('message_error', (err) => {
+      setMessages((prev) => prev.filter((m) => !String(m.id).startsWith('temp-')));
+      alert(err?.message || t('chat.sendErr'));
     });
 
     socket.on('receive_file', (fileMsg) => {
@@ -380,7 +381,7 @@ export default function Chat() {
             <button
               onClick={() => navigate('/home')}
               className="dash-icon-btn"
-              title="Retour aux demandes"
+              title={t('common.back')}
             >
               <Icon name="chevron-left" size={18} />
             </button>
@@ -393,11 +394,7 @@ export default function Chat() {
                 </span>
                 <span>•</span>
                 <span style={{ marginInlineStart: '6px' }}>
-                  {isApprenant
-                    ? requestData?.mentorId
-                      ? 'Mentor assigné'
-                      : 'En attente de mentor'
-                    : 'Apprenant en ligne'}
+                  {isApprenant ? t('chat.mentor') : t('chat.learner')}
                 </span>
               </div>
             </div>
@@ -409,7 +406,7 @@ export default function Chat() {
                 <button
                   onClick={() => setShowRating(true)}
                   className="btn btn-primary"
-                  style={{ padding: '6px 14px', fontSize: '12px' }}
+                  style={{ padding: '6px 12px', fontSize: '12px' }}
                 >
                   <Icon name="check" size={14} />
                   <span>{t('chat.closeRate')}</span>
@@ -419,8 +416,8 @@ export default function Chat() {
                   onClick={handleReplace}
                   disabled={replacing}
                   className="btn btn-outline"
-                  style={{ padding: '6px 12px', fontSize: '12px' }}
-                  title="Remplacer le mentor"
+                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  title={t('chat.replace')}
                 >
                   <span>{replacing ? t('chat.replacing') : t('chat.replace')}</span>
                 </button>
@@ -503,7 +500,7 @@ export default function Chat() {
           )}
 
           {messages.map((msg) => {
-            const hasTranslation = Boolean(msg.content_translated && msg.content_translated !== msg.content);
+            const hasTranslation = !msg.isMe && Boolean(msg.content_translated && msg.content_translated.trim() !== msg.content.trim());
             const isShowingOriginal = Boolean(showOriginal[msg.id]);
             const displayContent = hasTranslation && !isShowingOriginal ? msg.content_translated : msg.content;
 
@@ -528,7 +525,7 @@ export default function Chat() {
                     </a>
                   ) : (
                     <>
-                      <div>{displayContent}</div>
+                      <div style={{ minHeight: '20px' }}>{displayContent}</div>
                       {hasTranslation && (
                         <button
                           type="button"
@@ -546,13 +543,13 @@ export default function Chat() {
                 </div>
 
                 <div className="chat-msg-time">
-                  {msg.time}
-                  {hasTranslation && !isShowingOriginal && (
+                  <span>{msg.time}</span>
+                  {hasTranslation && (
                     <span style={{ marginInlineStart: 6, opacity: 0.8 }}>
                       • {t('common.translatedVia', {
                           from: (msg.sourceLang || 'auto').toUpperCase(),
                           to: (lang || 'fr').toUpperCase(),
-                          engine: msg.engine || 'Muse Spark'
+                          engine: 'Meta Muse Spark'
                         })}
                     </span>
                   )}

@@ -59,7 +59,7 @@ const TAG_STYLES = {
 
 export default function Profile() {
   const { t, i18n } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, changeLanguage } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [freshData, setFreshData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +70,7 @@ export default function Profile() {
       try {
         const res = await getMyProfile();
         setFreshData(res.data.user);
-        updateUser(res.data.user);
+        updateUser(res.data.user, false);
       } catch (err) {
         console.error('Erreur chargement profil:', err);
       } finally {
@@ -81,7 +81,7 @@ export default function Profile() {
   }, []);
 
   const profileData = freshData || user;
-  const lang = (profileData?.preferredLang || user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+  const lang = (i18n.language || profileData?.preferredLang || user?.preferredLang || 'fr').slice(0, 2);
   const rankClass = getRankBadgeClass(profileData?.rankTitle);
   const xpInfo = getXPProgress(profileData?.xpPoints ?? 0);
 
@@ -114,11 +114,8 @@ export default function Profile() {
   const handleLangChange = async (e) => {
     const newLang = e.target.value;
     try {
-      const res = await updateMyLang(newLang);
-      updateUser(res.data.user);
-      setFreshData((p) => ({ ...(p || profileData), preferredLang: res.data.user.preferredLang }));
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
-      localStorage.setItem('user', JSON.stringify({ ...stored, preferredLang: res.data.user.preferredLang }));
+      await changeLanguage(newLang);
+      setFreshData((p) => ({ ...(p || profileData), preferredLang: newLang }));
     } catch {
       alert(t('profile.langErr'));
     }
@@ -160,9 +157,10 @@ export default function Profile() {
                     {t('profile.countryLang')}
                   </span>
                   <select
-                    value={profileData?.preferredLang || 'fr'}
+                    value={lang}
                     onChange={handleLangChange}
-                    className="input"
+                    translate="no"
+                    className="input notranslate"
                     style={{ padding: '4px 10px', fontSize: '12px', width: 'auto' }}
                   >
                     <option value="fr">Français (FR)</option>

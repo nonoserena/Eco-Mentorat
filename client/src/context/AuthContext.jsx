@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import i18n from '../i18n/index.js';
-import { login as loginAPI, register as registerAPI } from '../services/api';
+import { login as loginAPI, register as registerAPI, updateMyLang } from '../services/api';
 
 const syncLang = (lang) => {
-    const l = String(lang || 'fr').toLowerCase().slice(0, 5);
+    const l = String(lang || 'fr').toLowerCase().slice(0, 2);
     const supported = ['fr', 'en', 'ja', 'ar', 'pt', 'es', 'wo', 'zh'];
     const finalLang = supported.includes(l) ? l : 'fr';
     try {
@@ -12,6 +12,7 @@ const syncLang = (lang) => {
         document.documentElement.lang = finalLang;
         document.documentElement.dir = finalLang === 'ar' ? 'rtl' : 'ltr';
     } catch {}
+    return finalLang;
 };
 
 const AuthContext = createContext();
@@ -23,46 +24,77 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token    = localStorage.getItem('token');
         const userData = localStorage.getItem('user');
+        const savedLang = localStorage.getItem('eco-lang');
         if (token && userData) {
-                    try {
-                        const parsed = JSON.parse(userData);
-                        setUser(parsed);
-                        syncLang(parsed.preferredLang || localStorage.getItem('eco-lang') || 'fr');
-                    } catch {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
-                    }
-                } else {
-                    syncLang(localStorage.getItem('eco-lang') || 'fr');
-                }
-                setLoading(false);
+            try {
+                const parsed = JSON.parse(userData);
+                const activeLang = syncLang(savedLang || parsed.preferredLang || 'fr');
+                const syncedUser = { ...parsed, preferredLang: activeLang };
+                setUser(syncedUser);
+                localStorage.setItem('user', JSON.stringify(syncedUser));
+            } catch {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            }
+        } else {
+            syncLang(savedLang || 'fr');
+        }
+        setLoading(false);
     }, []);
 
     const login = async (email, password) => {
-            const res = await loginAPI({ email, password });
-            localStorage.setItem('token', res.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            setUser(res.data.user);
-            syncLang(res.data.user?.preferredLang || 'fr');
-            return res.data;
-        };
+        const res = await loginAPI({ email, password });
+        const activeLang = syncLang(res.data.user?.preferredLang || localStorage.getItem('eco-lang') || 'fr');
+        const syncedUser = { ...res.data.user, preferredLang: activeLang };
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(syncedUser));
+        setUser(syncedUser);
+        return res.data;
+    };
 
-        const register = async (formData) => {
-            const res = await registerAPI(formData);
-            localStorage.setItem('token', res.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            setUser(res.data.user);
-            syncLang(res.data.user?.preferredLang || formData.preferredLang || 'fr');
-            return res.data;
-        };
+    const register = async (formData) => {
+        const res = await registerAPI(formData);
+        const activeLang = syncLang(formData.preferredLang || res.data.user?.preferredLang || 'fr');
+        const syncedUser = { ...res.data.user, preferredLang: activeLang };
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(syncedUser));
+        setUser(syncedUser);
+        return res.data;
+    };
 
-        // FIX: met à jour le user dans le state ET le localStorage après une action
-        const updateUser = (updatedFields) => {
-            const newUser = { ...user, ...updatedFields };
-            localStorage.setItem('user', JSON.stringify(newUser));
-            setUser(newUser);
-            if (updatedFields?.preferredLang) syncLang(updatedFields.preferredLang);
-        };
+    // Met à jour le user sans jamais écraser la langue choisie lors des rafraîchissements silencieux
+    const updateUser = (updatedFields, forceLangSync = false) => {
+        setUser((prev) => {
+            const currentLang = (localStorage.getItem('eco-lang') || i18n.language || prev?.preferredLang || 'fr').slice(0, 2);
+            const targetLang = forceLangSync && updatedFields?.preferredLang
+                ? syncLang(updatedFields.preferredLang)
+                : currentLang;
+            const newUser = { ...(prev || {}), ...updatedFields, preferredLang: targetLang };
+            try {
+                localStorage.setItem('user', JSON.stringify(newUser));
+            } catch {}
+            return newUser;
+        });
+    };
+
+    // Changement explicite de langue depuis LanguageSwitcher ou Profile : fixe local + serveur
+    const changeLanguage = async (code) => {
+        const finalLang = syncLang(code);
+        setUser((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, preferredLang: finalLang };
+            try {
+                localStorage.setItem('user', JSON.stringify(updated));
+            } catch {}
+            return updated;
+        });
+        if (localStorage.getItem('token')) {
+            try {
+                await updateMyLang(finalLang);
+            } catch {}
+        }
+        return finalLang;
+    };
 
     const logout = () => {
         localStorage.removeItem('token');
@@ -72,7 +104,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, updateUser, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, updateUser, changeLanguage, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

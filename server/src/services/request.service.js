@@ -2,6 +2,7 @@ const Request = require('../models/Request');
 const User = require('../models/User');
 const AppError = require('../errors/AppError');
 const TranslateService = require('./translate.service');
+const Muse = require('./muse.service');
 const { nettoyerEtRegrouperTag } = require('../utils/tagNormalizer');
 const { contientContenuInterdit } = require('../utils/antiMarket');
 const { calculerScorePondere } = require('../utils/reputation');
@@ -9,15 +10,34 @@ const { REPUTATION } = require('../config/constants');
 
 class RequestService {
     /**
-     * Publication d'une nouvelle demande d'aide
+     * Publication d'une nouvelle demande d'aide (avec double modération Regex + Agent Meta Muse Spark)
      */
     static async createRequest({ requesterId, title, description, skillTag }, socketManager = null) {
         if (contientContenuInterdit(title) || contientContenuInterdit(description)) {
-            throw new AppError('Publication bloquée. Les transactions financières ou coordonnées privées sont interdites.', 400);
+            throw new AppError(
+                'Publication bloquée par le filtre Anti-Marché : les annonces commerciales (vente/achat), transactions financières ou coordonnées privées sont strictement interdites sur Éco-Mentorat.',
+                400
+            );
         }
 
         const student = await User.findById(requesterId);
         if (!student) throw new AppError('Utilisateur introuvable.', 404);
+
+        // Agent de modération Meta Muse Spark (détection sémantique MARKET / CHEAT)
+        try {
+            const mod = await Muse.sparkModerate(`${title}\n${description}`, skillTag, student.preferredLang || 'fr');
+            if (mod && (mod.label === 'MARKET' || mod.label === 'CHEAT') && (mod.confidence ?? 1) >= 0.6) {
+                const defaultReason = mod.label === 'MARKET'
+                    ? 'Les annonces commerciales, ventes et recherches de marchands sont interdites sur cette plateforme académique.'
+                    : 'La demande de résolution intégrale d\'un examen ou devoir noté est interdite.';
+                throw new AppError(
+                    `Publication refusée par l'agent Meta Muse Spark (${mod.label}) : ${mod.reason || defaultReason}`,
+                    400
+                );
+            }
+        } catch (err) {
+            if (err instanceof AppError) throw err;
+        }
 
         if (student.requestsLeft <= 0) {
             throw new AppError("Tu as beaucoup sollicité la communauté ! Aide un camarade à son tour pour débloquer de nouveaux tickets.", 403);
@@ -311,6 +331,23 @@ class RequestService {
 
         request.status = 'completed';
         request.rating = rating;
+
+        // Synthèse et certification de compétence par l'agent Meta Muse Spark
+        try {
+            const Message = require('../models/Message');
+            const messages = await Message.find({ requestId }).sort({ createdAt: 1 }).limit(50).lean();
+            if (messages.length > 0) {
+                const transcript = messages.map(m => `${m.senderUsername}: ${m.content}`).join('\n');
+                const summaryObj = await Muse.sparkSummarizeSession(transcript, tagStd, mentor.preferredLang || 'fr');
+                if (summaryObj) {
+                    request.aiSummary = summaryObj.summary || null;
+                    request.verifiedSkill = summaryObj.verifiedSkill || null;
+                }
+            }
+        } catch (sumErr) {
+            console.warn('[MUSE] Échec résumé de session:', sumErr.message);
+        }
+
         await request.save();
 
         return {

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
-import { createRequest } from '../../services/api';
+import { createRequest, scanExercisePhoto, autoTagRequest, voiceTranscribeRequest } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/Icon';
 import { formatNumber } from '../../utils/format';
@@ -16,14 +16,21 @@ export default function CreateRequest() {
   const { t, i18n } = useTranslation();
   const lang = (i18n.language || 'fr').slice(0, 2);
 
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [tagging, setTagging] = useState(false);
+  const [aiNote, setAiNote] = useState('');
   const [error, setError] = useState('');
   const [blocked, setBlocked] = useState(false);
 
-  // Détection automatique intelligente basée sur le texte saisi
+  // Détection automatique locale de secours
   const detectSkillTag = (text) => {
     const txt = (text || '').toLowerCase();
     if (txt.includes('java') || txt.includes('spring') || txt.includes('jee')) return '#java';
@@ -39,6 +46,115 @@ export default function CreateRequest() {
 
   const autoDetectedTag = detectSkillTag(`${title} ${description}`);
   const currentTag = selectedTag || autoDetectedTag;
+
+  // 1. Automatisation SAM 3.1 + Muse Spark Vision : scan de photo d'exercice
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      return setError('Image trop volumineuse (max 5 Mo).');
+    }
+
+    setScanning(true);
+    setError('');
+    setAiNote('');
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result;
+        const res = await scanExercisePhoto({
+          imageBase64: base64Data,
+          mimeType: file.type || 'image/jpeg'
+        });
+
+        if (res.data?.data) {
+          const { title: aiTitle, description: aiDesc, suggestedTag } = res.data.data;
+          if (aiTitle) setTitle(aiTitle);
+          if (aiDesc) setDescription(aiDesc);
+          if (suggestedTag && OFFICIAL_TAGS.includes(suggestedTag.toLowerCase())) {
+            setSelectedTag(suggestedTag.toLowerCase());
+          }
+          setAiNote("Exercice segmenté (SAM 3.1) et transcrit par Meta Muse Spark Vision");
+        } else {
+          setAiNote("Photo analysée par SAM 3.1. Veuillez préciser l'énoncé ci-dessous.");
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || "Échec de l'analyse visuelle par l'agent Meta.");
+      } finally {
+        setScanning(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // 2. Automatisation Muse Voice Transcribe (muse-voice-transcribe-1.0) : dictée vocale 2G
+  const handleVoiceToggle = () => {
+    if (recording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("La capture vocale nécessite un navigateur compatible (Chrome / Edge).");
+      return;
+    }
+
+    setError('');
+    setAiNote('');
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang === 'ja' ? 'ja-JP' : lang === 'en' ? 'en-US' : lang === 'ar' ? 'ar-SA' : 'fr-FR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setRecording(true);
+    recognition.onend = () => setRecording(false);
+    recognition.onerror = () => setRecording(false);
+
+    recognition.onresult = async (event) => {
+      const rawText = event.results?.[0]?.[0]?.transcript || '';
+      if (!rawText) return;
+      try {
+        const res = await voiceTranscribeRequest({ rawTranscript: rawText, lang });
+        const finalText = res.data?.data?.text || rawText;
+        setDescription((prev) => (prev ? `${prev} ${finalText}` : finalText));
+        if (!title.trim()) {
+          setTitle(finalText.length > 70 ? `${finalText.slice(0, 70)}...` : finalText);
+        }
+        setAiNote("Dictée transcrite et structurée via Meta Muse Voice Transcribe (muse-voice-transcribe-1.0)");
+      } catch {
+        setDescription((prev) => (prev ? `${prev} ${rawText}` : rawText));
+      }
+    };
+
+    recognition.start();
+  };
+
+  // 3. Automatisation Muse Glimmer (muse-glimmer-1.0) : classification & auto-tagging
+  const handleAiAutoTag = async () => {
+    if (!title.trim() && !description.trim()) return;
+    setTagging(true);
+    setError('');
+    try {
+      const res = await autoTagRequest({ title, description });
+      if (res.data?.suggestedTag) {
+        const tag = res.data.suggestedTag.toLowerCase();
+        if (OFFICIAL_TAGS.includes(tag)) {
+          setSelectedTag(tag);
+          setAiNote(`Matière identifiée par Meta Muse Glimmer : ${tag} (Niveau ${res.data.difficulty || 'Intermédiaire'})`);
+        }
+      }
+    } catch {
+      // repli transparent sur la regex locale
+    } finally {
+      setTagging(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -67,20 +183,16 @@ export default function CreateRequest() {
       const status = err.response?.status;
       const message = err.response?.data?.message || '';
 
-      // Gestion du cas de limitation / blocage anti-passager clandestin (403)
       if (status === 403) {
         setBlocked(true);
-      } else if (message.includes('interdites') || message.includes('financières')) {
-        setError(message || t('create.errorForbidden') || 'Les transactions ou coordonnées privées sont interdites.');
       } else {
-        setError(message || t('create.errorGeneric') || 'Erreur lors de la publication.');
+        setError(message || t('create.errPublish') || 'Une erreur est survenue lors de la publication.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Écran d'incitation à aider ses pairs si quotas de demandes épuisés (logique 403)
   if (blocked) {
     return (
       <DashboardLayout>
@@ -135,6 +247,68 @@ export default function CreateRequest() {
           </div>
         )}
 
+        {aiNote && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
+            marginBottom: 20, fontSize: 13, background: 'var(--blue-light)',
+            color: 'var(--blue)', border: '1px solid var(--border)', borderRadius: 6
+          }}>
+            <Icon name="check-circle" size={16} />
+            <span>{aiNote}</span>
+          </div>
+        )}
+
+        {/* Barre d'acquisition multimodale Meta AI (SAM 3.1 + Muse Spark Vision + Muse Voice Transcribe) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: 20 }}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handlePhotoUpload}
+            style={{ display: 'none' }}
+            accept="image/*"
+            capture="environment"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={scanning}
+            className="btn btn-outline"
+            style={{
+              padding: '12px 14px', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontSize: 13, fontWeight: 600, borderStyle: 'dashed'
+            }}
+          >
+            {scanning ? (
+              <>
+                <span className="spinner" style={{ width: 14, height: 14 }} />
+                <span>SAM 3.1 + Muse Spark Vision...</span>
+              </>
+            ) : (
+              <>
+                <Icon name="camera" size={16} />
+                <span>Scanner un exercice (SAM 3.1 + Vision)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleVoiceToggle}
+            className={recording ? 'btn btn-primary' : 'btn btn-outline'}
+            style={{
+              padding: '12px 14px', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontSize: 13, fontWeight: 600, borderStyle: recording ? 'solid' : 'dashed'
+            }}
+          >
+            <Icon name="mic" size={16} />
+            <span>
+              {recording ? 'Écoute en cours (Cliquer pour arrêter)...' : 'Dicter en vocal 2G (Muse Voice Transcribe)'}
+            </span>
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="card" style={{ padding: 28 }}>
           {/* Sujet */}
           <div className="field">
@@ -147,6 +321,7 @@ export default function CreateRequest() {
               className="input"
               value={title}
               onChange={(e) => { setTitle(e.target.value); setError(''); }}
+              onBlur={handleAiAutoTag}
               placeholder="Ex. : Problème avec la récursion en langage C"
               maxLength={120}
             />
@@ -163,6 +338,7 @@ export default function CreateRequest() {
               rows={5}
               value={description}
               onChange={(e) => { setDescription(e.target.value); setError(''); }}
+              onBlur={handleAiAutoTag}
               placeholder={t('create.placeholder')}
               maxLength={1000}
               required
@@ -174,6 +350,7 @@ export default function CreateRequest() {
                 <span className="badge badge-blue">
                   {currentTag}
                 </span>
+                {tagging && <span className="spinner" style={{ width: 12, height: 12 }} />}
               </div>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                 {formatNumber(description.length, lang)} / 1000

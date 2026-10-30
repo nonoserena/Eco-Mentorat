@@ -12,8 +12,11 @@ RUN apk add --no-cache curl
 # Copie des manifestes de dépendances
 COPY package*.json ./
 
-# Installation propre des dépendances de production
-RUN npm ci --omit=dev
+# Installation propre des dépendances de production avec résilience réseau
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm ci --omit=dev
 
 # Copie du code source
 COPY src ./src

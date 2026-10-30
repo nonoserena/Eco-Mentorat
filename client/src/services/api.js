@@ -3,8 +3,7 @@ import axios from 'axios';
 // Docker-first : via Nginx (port 8082) on utilise /api, en dev local on garde 5000
 const getBaseURL = () => {
     if (import.meta?.env?.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    if (typeof window !== 'undefined' && (window.location.port === '8082' || window.location.port === '80')) return '/api';
-    return 'http://localhost:5000/api';
+    return '/api';
 };
 
 const API = axios.create({
@@ -38,6 +37,9 @@ export const login    = (data) => API.post('/auth/login', data);
 // Demandes (multilingue pays : JP voit JA, AR voit AR, BR voit PT via viewerLang)
 export const getRequests     = (page, limit, lang) => API.get(`/requests/all?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
 export const createRequest   = (data)        => API.post('/requests/create', data);
+export const autoTagRequest  = (data) => API.post('/requests/auto-tag', data);
+export const voiceTranscribeRequest = (data) => API.post('/requests/voice-transcribe', data);
+export const scanExercisePhoto = (data) => API.post('/requests/scan-exercise', data);
 export const acceptRequest   = (data)        => API.post('/requests/accept', data);
 export const completeRequest = (data)        => API.post('/requests/complete', data);
 export const replaceMentor   = (data)        => API.post('/requests/replace-mentor', data);

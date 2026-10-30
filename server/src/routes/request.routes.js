@@ -21,6 +21,26 @@ router.post(
     RequestController.create
 );
 
+// Automatisations Meta AI
+router.post(
+    '/auto-tag',
+    [
+        body('title').trim().notEmpty().withMessage('Titre obligatoire.')
+    ],
+    validate,
+    RequestController.autoTag
+);
+
+router.post(
+    '/scan-exercise',
+    RequestController.scanExercise
+);
+
+router.post(
+    '/voice-transcribe',
+    RequestController.voiceTranscribe
+);
+
 // 2. Toutes les demandes ouvertes
 router.get(
     '/all',

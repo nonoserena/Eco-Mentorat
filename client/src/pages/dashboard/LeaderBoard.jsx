@@ -11,7 +11,7 @@ const SKILL_TAGS = ['', '#java', '#reseau', '#linux', '#python', '#droit', '#web
 export default function Leaderboard() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const lang = (user?.preferredLang || i18n.language || 'fr').slice(0, 2);
+  const lang = (i18n.language || user?.preferredLang || 'fr').slice(0, 2);
 
   const [leaders, setLeaders] = useState([]);
   const [skill, setSkill] = useState('');

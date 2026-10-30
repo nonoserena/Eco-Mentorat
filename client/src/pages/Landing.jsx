@@ -42,19 +42,15 @@ export default function Landing() {
     <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
 
       {/* NAVBAR */}
-      <nav style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        position: 'sticky', top: 0, zIndex: 50, padding: '0 clamp(16px, 4vw, 48px)',
-        height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--heading)', letterSpacing: '-0.03em' }}>
+      <nav className="landing-nav">
+        <span className="landing-nav-logo">
           Eco<span style={{ color: 'var(--accent)' }}>-Mentorat</span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="landing-nav-actions">
           <LanguageSwitcher compact />
           <ThemeToggle />
-          <Link to="/login" className="btn btn-ghost">{t('nav.login')}</Link>
-          <Link to="/register" className="btn btn-primary">{t('nav.register')}</Link>
+          <Link to="/login" className="btn btn-ghost landing-nav-login">{t('nav.login')}</Link>
+          <Link to="/register" className="btn btn-primary landing-nav-register">{t('nav.register')}</Link>
         </div>
       </nav>
 
@@ -99,12 +95,18 @@ export default function Landing() {
       }}>
         {[
           { num: '8',    label: t('landing.statLangs') },
-          { num: '12+',  label: t('landing.statSubjects') },
+          { num: '+12',  label: t('landing.statSubjects'), notranslate: true },
           { num: '100%', label: t('landing.statFree') },
           { num: '0',    label: t('landing.statFees') },
         ].map((s) => (
           <div key={s.label} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--band-fg)', letterSpacing: '-0.03em' }}>{s.num}</div>
+            <div
+              translate={s.notranslate ? 'no' : 'yes'}
+              className={s.notranslate ? 'notranslate' : ''}
+              style={{ fontSize: 28, fontWeight: 700, color: 'var(--band-fg)', letterSpacing: '-0.03em' }}
+            >
+              {s.num}
+            </div>
             <div style={{ fontSize: 11, color: 'var(--band-muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{s.label}</div>
           </div>
         ))}

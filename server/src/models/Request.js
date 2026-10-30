@@ -71,6 +71,14 @@ const RequestSchema = new mongoose.Schema({
         type: String,
         default: null,
         maxlength: [500, 'La raison ne peut pas dépasser 500 caractères.']
+    },
+    aiSummary: {
+        type: String,
+        default: null
+    },
+    verifiedSkill: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true

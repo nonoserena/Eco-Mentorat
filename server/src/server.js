@@ -14,7 +14,7 @@ const startServer = async () => {
 
     // 3. Initialisation de la couche WebSockets
     const socketManager = new SocketManager(server, {
-        origin: CLIENT_URL || 'http://localhost:5173',
+        origin: true,
         methods: ['GET', 'POST'],
         credentials: true
     });

@@ -146,6 +146,68 @@ class RequestController {
             next(err);
         }
     }
+
+    /**
+     * Automatisation Meta Muse Spark : Auto-étiquetage et analyse de matière
+     */
+    static async autoTag(req, res, next) {
+        try {
+            const { title, description } = req.body;
+            const Muse = require('../services/muse.service');
+            const result = await Muse.sparkAutoTag(title, description || '');
+            res.status(200).json({
+                status: 'success',
+                poweredBy: 'Meta Muse Spark',
+                ...(result || { suggestedTag: '#general', confidence: 0.5, difficulty: 'Intermédiaire' })
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    /**
+     * Automatisation Meta Muse Spark Vision : Scan et transcription d'une photo d'exercice
+     */
+    static async scanExercise(req, res, next) {
+        try {
+            const { imageBase64, mimeType } = req.body;
+            if (!imageBase64) {
+                return res.status(400).json({ status: 'fail', message: 'Image manquante.' });
+            }
+            const dataUrl = imageBase64.startsWith('data:')
+                ? imageBase64
+                : `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
+            const Muse = require('../services/muse.service');
+            const userLang = req.user?.preferredLang || 'fr';
+            const result = await Muse.sparkAnalyzeExercisePhoto(dataUrl, userLang);
+            res.status(200).json({
+                status: 'success',
+                poweredBy: 'Meta SAM 3.1 + Muse Spark Vision',
+                data: result || null
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    /**
+     * Automatisation Meta Muse Voice Transcribe : Transcription vocale 2G -> demande structurée
+     */
+    static async voiceTranscribe(req, res, next) {
+        try {
+            const { audioBase64, rawTranscript, lang } = req.body;
+            const Muse = require('../services/muse.service');
+            const userLang = lang || req.user?.preferredLang || 'fr';
+            const result = await Muse.voiceTranscribe(audioBase64 || null, userLang, rawTranscript || '');
+            res.status(200).json({
+                status: 'success',
+                poweredBy: 'Meta Muse Voice Transcribe (muse-voice-transcribe-1.0)',
+                data: result || { text: rawTranscript || '', model: 'muse-voice-transcribe-1.0' }
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
 }
 
 module.exports = RequestController;

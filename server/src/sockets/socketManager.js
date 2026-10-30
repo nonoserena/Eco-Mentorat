@@ -93,6 +93,7 @@ class SocketManager {
                                     // Émet version personnalisée au receveur
                                     socket.to(requestId.toString()).emit('receive_message', {
                                         id: savedMsg ? savedMsg._id : Date.now(),
+                                        userId: senderId,
                                         content,
                                         content_translated: tr.translated,
                                         translated: tr.translated,
@@ -128,6 +129,7 @@ class SocketManager {
                     const payloadTime = time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                     socket.to(requestId.toString()).emit('receive_message', {
                         id: savedMsg ? savedMsg._id : Date.now(),
+                        userId: senderId,
                         content,
                         content_translated: null,
                         sourceLang: srcLang,

@@ -14,12 +14,14 @@ import PublicProfile from './pages/profile/PublicProfile';
 import Chat          from './pages/chat/Chat';
 
 const ProtectedRoute = ({ children }) => {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    if (loading) return null;
     return user ? children : <Navigate to="/login" replace />;
 };
 
 const PublicRoute = ({ children }) => {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    if (loading) return null;
     return !user ? children : <Navigate to="/home" replace />;
 };
 
