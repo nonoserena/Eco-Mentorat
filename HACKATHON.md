@@ -5,6 +5,21 @@
 
 ---
 
+## 0. Pre-existing Baseline vs. Built During the Hackathon
+
+The repository history is public and lets judges verify what is original to the event (building period: Oct 27 – Nov 4).
+
+| | Date | Commit | Content |
+|---|---|---|---|
+| **Baseline (before the hackathon)** | Oct 10 | `d707daa` | `feat: initial commit - Clean Architecture v2.0` — generic MERN scaffold of the peer-to-peer student help board (auth, requests, chat, Docker). **No Meta model integration.** |
+| **Built during the hackathon** | Oct 27 → Oct 30 | `7f19666` … `7266e94` (15 commits) | All Meta Model API integration (Muse Spark 1.3 translation, Spark Open moderation, Glimmer auto-tagging, SAM 3.1 + Vision scan, Voice Transcribe, Muse Wonder certification), 8-language i18n, real-time multilingual feed, academic UI redesign v3, chat translation toggle, XP notifications, DB reset tooling, demo video. |
+
+Verify with: `git log --date=short --pretty="%h %ad %s"`.
+
+The demo video highlights only the features listed in the second row. The base help-board concept and scaffold from Oct 10 are the only pre-existing parts.
+
+---
+
 ## 1. What Was Built During the Hackathon (Oct 27 – Nov 4)
 
 During the Meta Global AI Developer Hackathon, we built and integrated the **Meta AI Multi-Model Agentic Layer** at the core of Éco-Mentorat, transforming a local student help board into a cross-border, multimodal, self-moderating mentoring network across **8 languages** (`FR`, `JA`, `AR`, `PT`, `EN`, `ES`, `WO`, `ZH`).
