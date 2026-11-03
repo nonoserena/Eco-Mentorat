@@ -7,6 +7,22 @@
 **Author:** NONO YOTCHA Serena Lynn  
 **Repository:** [https://github.com/nonoserena/Eco-Mentorat](https://github.com/nonoserena/Eco-Mentorat)
 
+> *"I am Nono Yotcha Serena Lynn, a first-year Master's student in Software Engineering. Please excuse my English, as I am a French speaker. I would like to thank the Meta team for this opportunity: thanks to Meta's models, I was able to build Eco-Mentorat and break down the language barriers separating students across the globe. Thank you so much. Eco-Mentorat is about students helping students, free of language barriers."*
+
+---
+
+## The Origin Story — Why Éco-Mentorat Was Born
+
+During my Software Engineering studies in Cameroon (*Centre Universitaire La Perle — CENULAPE* and my academic internship at *Alpha Digital Services*), I observed a daily reality faced by university students: **accessing targeted, fast, and reliable academic help when stuck on a specific exercise, lab assignment, or line of code is slow, disorganized, and often costly.**
+
+An in-depth study of the three existing alternatives used by students revealed a major gap:
+1. **Instant Messaging & Social Groups (*WhatsApp, Telegram, Facebook*):** They are every student's first reflex, yet they suffer from chronic disorganization. Urgent technical questions are quickly buried under off-topic messages, there is no objective way to verify whether the person answering actually masters the subject (spreading errors), and the absence of an ethical framework opens the door to informal paid tutoring or scams.
+2. **Global Q&A Forums (*Stack Overflow, Reddit, Quora*):** While structured, they impose a **heavy language barrier** on non-English-speaking students, suffer from slow response times or condescension toward beginners, and remain disconnected from local university curricula and realities.
+3. **E-Learning Platforms (*Udemy, Coursera, Khan Academy*):** They deliver top-down, pre-recorded generic courses that cannot unblock a student on a specific bug or an exercise assigned that very morning, lacking direct peer-to-peer human empathy.
+
+**The Solution — Éco-Mentorat, Supercharged by Meta AI:**  
+No existing tool combined **instant peer-to-peer interaction, skill-based matching (`SkillTags`), ethical 100% free reciprocity, verified mentor reputation, and borderless multilingual accessibility**. I initially designed **Éco-Mentorat** to structure and secure local student mutual aid—and during the **Meta Global AI Developer Hackathon**, integrating **Meta's 6 AI models (`Muse Spark 1.3`, `Muse Spark Open 1026`, `Muse Glimmer 1.0`, `SAM 3.1`, `Muse Voice Transcribe 1.0`, and `Muse Wonder 1.0`)** unlocked the decisive missing piece: **breaking down language barriers worldwide on low-bandwidth 2G/3G networks**, so a student in Douala and a student in Osaka can help each other in their native languages as if they were sitting at the same desk.
+
 ---
 
 ## 1. Overview / Présentation Générale

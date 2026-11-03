@@ -1,7 +1,23 @@
 # Éco-Mentorat — Meta Global AI Developer Hackathon Submission
 
 **Track :** Build for Your World  
+**Author :** NONO YOTCHA Serena Lynn  
+**Repository :** [https://github.com/nonoserena/Eco-Mentorat](https://github.com/nonoserena/Eco-Mentorat)  
 **Tagline :** Peer-to-peer academic mentoring without language barriers (Douala ↔ Osaka), powered by a multi-model Meta AI agentic pipeline optimized for 2G networks.
+
+> *"I am Nono Yotcha Serena Lynn, a first-year Master's student in Software Engineering. Please excuse my English, as I am a French speaker. I would like to thank the Meta team for this opportunity: thanks to Meta's models, I was able to build Eco-Mentorat and break down the language barriers separating students across the globe. Thank you so much. Eco-Mentorat is about students helping students, free of language barriers."*
+
+---
+
+## The Origin Story — Why Éco-Mentorat Was Born
+
+As a Software Engineering student in Cameroon, I witnessed firsthand how difficult, slow, and costly it is for university students to get targeted help when stuck on a specific lab, algorithm, or assignment:
+- **WhatsApp / Telegram study groups** are chronically disorganized (questions buried in noise, unverified answers, and informal paid help or scams).
+- **Global forums (Stack Overflow, Reddit)** erect a steep **language barrier**, often intimidate beginners, and ignore local university curricula.
+- **Pre-recorded E-Learning platforms (Coursera, Udemy)** are top-down and asynchronous, unable to unblock a student on a specific line of code in real time.
+
+**The Solution — Éco-Mentorat Optimized by Meta AI:**  
+Éco-Mentorat was born to bridge this gap with a **free, ethical, peer-to-peer mentoring platform** featuring skill-based matching (`SkillTags`), an anti-free-riding reciprocity quota, and a mathematically verified mentor portfolio. By integrating **6 Meta AI models** during the Hackathon (`muse-spark-1.3`, `meta-models/muse-spark-open-1026`, `muse-glimmer-1.0`, `sam-3.1`, `muse-voice-transcribe-1.0`, and `muse-wonder-1.0`), Éco-Mentorat overcame the ultimate barrier—**language**—allowing students from Douala to Osaka to scan exercises, dictate questions on 2G connections, and mentor one another in real time in their own native languages.
 
 ---
 
