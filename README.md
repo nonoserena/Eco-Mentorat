@@ -57,7 +57,73 @@ All Meta models are orchestrated in [`server/src/services/muse.service.js`](serv
 
 ---
 
-## 5. Tech Stack & Project Structure
+## 5. Architecture & Justification of Technical Choices
+
+To make Éco-Mentorat fast, resilient on African 2G/3G mobile networks, and resistant to abuse, every architectural choice was made deliberately:
+
+```mermaid
+flowchart LR
+    subgraph Client["React 19 + Vite Client (8 Languages + RTL)"]
+        UI["Academic Flat UI v3\n(< 1 KB payloads)"]
+        WS_C["Socket.io Client"]
+    end
+
+    subgraph Server["Node.js + Express Clean Architecture"]
+        CTRL["Controllers & JWT Auth"]
+        SVC["Domain Services\n(Request, Chat, Translate, User)"]
+        SOCK["SocketManager\n(Real-time Rooms & Presence)"]
+        MOD_R["Layer 1: Deterministic Regex\n(antiMarket.js - 0ms)"]
+    end
+
+    subgraph MetaAI["Layer 2: Meta AI Multi-Model Orchestrator (muse.service.js)"]
+        M1["muse-spark-1.3\n(Contextual Translation & Vision)"]
+        M2["muse-spark-open-1026\n(Semantic Moderation Agent)"]
+        M3["muse-glimmer-1.0\n(Low-Latency Auto-Tagging)"]
+        M4["sam-3.1\n(Notebook ROI Segmentation)"]
+        M5["muse-voice-transcribe-1.0\n(2G Voice Dictation)"]
+        M6["muse-wonder-1.0\n(Session Summary & Skill Badge)"]
+    end
+
+    subgraph Storage["Persistence & 2-Tier Cache"]
+        LRU["In-Memory LRU Cache\n(1,000 entries - 0ms)"]
+        MONGO[("MongoDB\nUsers, Requests, Messages\n+ Cached Translations Map")]
+    end
+
+    UI -->|REST API| CTRL --> SVC
+    WS_C <-->|WebSocket| SOCK --> SVC
+    SVC --> MOD_R
+    MOD_R -->|Passed Layer 1| MetaAI
+    SVC <--> LRU
+    SVC <--> MONGO
+```
+
+### Why These Architectural Choices?
+
+1. **Clean Layered Backend Architecture (`Routes → Controllers → Services → Models` + `SocketManager`):**
+   - **Justification:** Separating HTTP transport (`controllers/`) from business logic (`services/`) allows the **exact same translation, moderation, and persistence pipelines** to be shared between REST endpoints (`POST /api/requests/create`, `GET /api/chat/:id/history`) and real-time WebSocket events (`send_message` in [`socketManager.js`](server/src/sockets/socketManager.js)) without code duplication.
+2. **Multi-Model Task Specialization Instead of a Single Monolithic LLM:**
+   - **Justification:** Using one giant model for every action is too slow and expensive for real-time student mentoring. We route each task to the specialized Meta model best suited for it:
+     - **`muse-glimmer-1.0`** handles instant subject classification (`#python`, `#reseau`) on input blur with minimal latency.
+     - **`sam-3.1` + `muse-spark-1.3` Vision** split visual segmentation (`roi` extraction) from OCR transcription so noisy backgrounds on student desks do not corrupt the extracted exercise.
+     - **`muse-spark-open-1026`** (Open-Weights) handles structured JSON policy enforcement (`OK | MARKET | CHEAT`).
+     - **`muse-spark-1.3`** handles subject-aware pedagogical translation (`skillTag` context ensures technical terms like *deadlock*, *pointer*, or *recursion* are never mistranslated).
+     - **`muse-wonder-1.0`** runs asynchronously at session closure to synthesize the transcript and certify the mentor's demonstrated skill.
+3. **2G/3G Low-Bandwidth Engineering & 2-Tier Translation Caching (`< 1 KB / message`):**
+   - **Justification:** In Cameroon and across Francophone Africa, mobile data is costly and connections frequently drop to 2G/3G.
+   - Instead of streaming heavy media, chat frames are pure JSON text (`< 1 KB`).
+   - Translations use a **two-level cache**: an **in-memory bounded LRU cache** (`1,000` entries in [`translate.service.js`](server/src/services/translate.service.js)) for instant zero-network hits, backed by **persistent MongoDB `Map` fields** (`titleTranslations`, `descriptionTranslations` on `Request`, and `translations` on `Message`). Each message or request is translated **at most once per target language**, saving both mobile bandwidth and Meta API tokens.
+4. **Hybrid Dual-Layer Moderation (`0ms Regex` + `3.5s Bounded AI Agent`):**
+   - **Justification:** Calling an LLM on obvious spam wastes tokens and adds latency, while relying *only* on regex misses subtle paraphrasing.
+   - **Layer 1 ([`antiMarket.js`](server/src/utils/antiMarket.js)):** Deterministic regex with word boundaries (`\b`) blocks explicit phone numbers, Mobile Money (`MOMO`, `OM`), sales keywords (*chaussures*, *habits*), and paid homework offers (*"je te paye 500 tu me traites tous mes exercices"*) in `< 1 ms` at zero API cost.
+   - **Layer 2 ([`muse.service.js`](server/src/services/muse.service.js) → `sparkModerate`):** If Layer 1 passes, `muse-spark-open-1026` evaluates semantic intent (bounded by a `3.5s` `Promise.race` timeout in chat so a slow network never freezes the mentoring room).
+5. **Behavioral Anti-Free-Riding ("Anti-Njoh") & Anti-Collusion Reputation Engine:**
+   - **Justification:** Purely free peer-to-peer platforms fail when users consume help without ever contributing back (*free-riding*, known locally in Cameroon as *"njoh"*), or when two friends rate each other 5 stars repeatedly to farm XP.
+   - **Invisible Reciprocity Quota (`requestsLeft: 10`):** The counter is intentionally hidden from the UI so users cannot game the threshold. When depleted, the server returns an encouraging reciprocity prompt (*"Tu as beaucoup sollicité la communauté ! Aide un camarade à son tour pour débloquer de nouveaux tickets"*). Helping one peer immediately restores `+1` ticket, and a weekly cron job ([`ticketReset.job.js`](server/src/jobs/ticketReset.job.js)) resets quotas every Sunday at midnight so true beginners are never permanently locked out.
+   - **48-Hour Anti-Collusion Window & Weighted Formula ([`reputation.js`](server/src/utils/reputation.js)):** Repeat sessions between the same learner and mentor within 48 hours receive neutral weight, and the score combines average stars (`70%`) with the completion seriousness ratio `helpCount / acceptedCount` (`30%`) plus a diversity bonus for unique students helped.
+
+---
+
+## 6. Tech Stack & Project Structure
 
 - **Frontend (`client/`):** React 19, Vite, Socket.io-client, `react-i18next` (8 languages + Arabic RTL), custom Academic Flat Design System v3.
 - **Backend (`server/`):** Node.js, Express, MongoDB & Mongoose, Socket.io, PDFKit, JWT authentication, Helmet & Rate Limiting.
@@ -86,7 +152,7 @@ eco-mentorat/
 
 ---
 
-## 6. Quickstart — Local Installation & Execution
+## 7. Quickstart — Local Installation & Execution
 
 ### Prerequisites
 - **Node.js** `>= 18.x`
@@ -123,7 +189,7 @@ npm run dev:client
 
 ---
 
-## 7. Vision & Future Roadmap — From Mentoring Platform to Borderless Educational Social Network
+## 8. Vision & Future Roadmap — From Mentoring Platform to Borderless Educational Social Network
 
 Éco-Mentorat is designed to evolve progressively from a peer-to-peer help board into a **complete, borderless educational social network and academic career ecosystem**. Every upcoming module builds directly on our multi-model AI foundation:
 
@@ -152,6 +218,6 @@ npm run dev:client
 
 ---
 
-## 8. License
+## 9. License
 
 Distributed under the **ISC License**. Built with passion for students worldwide.
