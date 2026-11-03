@@ -99,16 +99,6 @@ git clone https://github.com/nonoserena/Eco-Mentorat.git
 cd Eco-Mentorat
 cp .env.example .env
 ```
-Fill in `.env` at the root of the project:
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/eco_mentorat
-JWT_SECRET=your_strong_jwt_secret_key
-CLIENT_URL=http://localhost:5173
-META_MODEL_API_URL=https://api.meta.ai/v1
-META_API_KEY=your_meta_api_key
-MUSE_SPARK_MODEL=muse-spark-1.3
-```
 
 ### 2. Install Dependencies
 ```bash
