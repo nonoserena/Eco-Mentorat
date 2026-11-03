@@ -84,7 +84,7 @@ class RequestService {
     static async localizeRequests(requests, viewerLang) {
         const target = TranslateService.normalizeLang(viewerLang, 'fr');
         return Promise.all((requests || []).map(async (r) => {
-            const source = TranslateService.normalizeLang(r.sourceLang || 'fr', 'fr');
+            const source = TranslateService.detectLanguage(`${r.title} ${r.description}`, TranslateService.normalizeLang(r.sourceLang || 'fr', 'fr'));
             const base = { ...r, sourceLang: source };
             if (source === target) {
                 return { ...base, title_display: r.title, description_display: r.description, title_translated: null, description_translated: null, viewerLang: target, engine: 'none' };

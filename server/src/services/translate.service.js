@@ -34,12 +34,37 @@ const DEMO_DICT = {
   ],
 };
 
+// Mots fréquents par langue latine : permet de détecter la vraie langue du texte
+// (l'utilisateur peut écrire en français alors que son interface est en anglais).
+const STOPWORDS = {
+  fr: 'le la les des du un une et est je tu il elle nous vous sur pour dans avec pas que qui mon ma mes ce cette au aux ne suis besoin aide exercice exercices comment pourquoi salut bonjour merci cherche veux peux tous toutes mon ton tes très'.split(' '),
+  en: 'the and is are you your i to of in it that for with this my do does not have has help need how why what hello thanks please pay can will all'.split(' '),
+  es: 'el los las que y es una por con para no mi tu como hola gracias ayuda necesito quiero puedo todos pero'.split(' '),
+  pt: 'os as um uma com para não meu minha você como olá obrigado ajuda preciso quero posso todos mas'.split(' '),
+};
+
+function detectLatinLanguage(text, hint) {
+  const words = String(text || '').toLowerCase().match(/[a-zà-ÿ]+/g) || [];
+  const scores = {};
+  for (const [lang, list] of Object.entries(STOPWORDS)) {
+    const set = new Set(list);
+    scores[lang] = words.reduce((n, w) => n + (set.has(w) ? 1 : 0), 0);
+  }
+  const best = Math.max(...Object.values(scores));
+  if (best === 0) return null;
+  const tied = Object.keys(scores).filter((l) => scores[l] === best);
+  if (tied.length === 1) return tied[0];
+  return tied.includes(hint) ? hint : tied[0];
+}
+
 function detectLanguage(text, hint) {
   const t = String(text || '');
   if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(t)) return 'ja';
   if (/[\u0600-\u06FF]/.test(t)) return 'ar';
   if (/[\u4E00-\u9FFF]/.test(t)) return 'zh';
   const h = String(hint || '').toLowerCase().slice(0,5);
+  const latin = detectLatinLanguage(t, h);
+  if (latin) return latin;
   if (SUPPORTED.includes(h)) return h;
   return 'fr';
 }

@@ -28,7 +28,7 @@ class RequestController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 20;
-            const viewerLang = req.user?.preferredLang || req.query.lang || 'fr';
+            const viewerLang = req.query.lang || req.user?.preferredLang || 'fr';
             const result = await RequestService.getAllRequests({ page, limit, viewerLang });
             res.status(200).json(result);
         } catch (err) {
@@ -40,7 +40,7 @@ class RequestController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 50;
-            const viewerLang = req.user?.preferredLang || req.query.lang || 'fr';
+            const viewerLang = req.query.lang || req.user?.preferredLang || 'fr';
             const result = await RequestService.getMyRequests(req.user.id, { page, limit, viewerLang });
             res.status(200).json(result);
         } catch (err) {
@@ -52,7 +52,7 @@ class RequestController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 20;
-            const viewerLang = req.user?.preferredLang || req.query.lang || 'fr';
+            const viewerLang = req.query.lang || req.user?.preferredLang || 'fr';
             const result = await RequestService.getMyHelps(req.user.id, { page, limit, viewerLang });
             res.status(200).json(result);
         } catch (err) {
@@ -64,7 +64,7 @@ class RequestController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 20;
-            const viewerLang = req.user?.preferredLang || req.query.lang || 'fr';
+            const viewerLang = req.query.lang || req.user?.preferredLang || 'fr';
             const result = await RequestService.getHistory({ page, limit, viewerLang });
             res.status(200).json(result);
         } catch (err) {
@@ -74,7 +74,7 @@ class RequestController {
 
     static async getById(req, res, next) {
         try {
-            const viewerLang = req.user?.preferredLang || req.query.lang || 'fr';
+            const viewerLang = req.query.lang || req.user?.preferredLang || 'fr';
             const request = await RequestService.getRequestById(req.params.id, viewerLang);
             res.status(200).json({ request });
         } catch (err) {

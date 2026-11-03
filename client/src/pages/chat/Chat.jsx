@@ -47,7 +47,7 @@ export default function Chat() {
   useEffect(() => {
     const fetchRequest = async () => {
       try {
-        const res = await getRequestById(requestId);
+        const res = await getRequestById(requestId, lang);
         const req = res.data.request;
         setRequestData(req);
 
@@ -57,7 +57,7 @@ export default function Chat() {
 
         // Historique persistant
         try {
-          const histRes = await getChatHistory(requestId);
+          const histRes = await getChatHistory(requestId, lang);
           if (histRes.data?.messages) {
             const myLang = lang;
             const mapped = histRes.data.messages.map((m) => {
@@ -110,7 +110,7 @@ export default function Chat() {
 
     socket.on('connect', () => {
       socket.emit('register_user', { userId: currentUser.id });
-      socket.emit('join_room', { requestId, userId: currentUser.id, username: currentUser.username });
+      socket.emit('join_room', { requestId, userId: currentUser.id, username: currentUser.username, lang });
     });
 
     socket.on('receive_message', (msg) => {
@@ -264,7 +264,7 @@ export default function Chat() {
         username: currentUser.username,
         userId: currentUser.id,
         time: sentTime,
-        sourceLang: (currentUser?.preferredLang || 'fr').slice(0, 2),
+        sourceLang: lang,
       });
     } catch {
       alert(t('chat.sendErr'));
@@ -387,7 +387,7 @@ export default function Chat() {
             </button>
 
             <div className="chat-title-group">
-              <h1 className="chat-title">{requestData?.title}</h1>
+              <h1 className="chat-title">{requestData?.title_display || requestData?.title}</h1>
               <div className="chat-sub">
                 <span className="badge badge-blue" style={{ fontSize: '10px', padding: '1px 6px', marginInlineEnd: '6px' }}>
                   {requestData?.skillTag}
@@ -492,6 +492,31 @@ export default function Chat() {
               )}
             </div>
           )}
+
+          {requestData?.description && (() => {
+            const hasReqTr = Boolean(requestData.description_translated && requestData.description_translated.trim() !== requestData.description.trim());
+            const showOrigReq = Boolean(showOriginal.__request);
+            return (
+              <div className="chat-bubble" style={{ marginBottom: 16, maxWidth: '100%' }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                  {showOrigReq && requestData.title_original ? requestData.title_original : (requestData.title_display || requestData.title)}
+                </div>
+                <div style={{ minHeight: '20px' }}>
+                  {hasReqTr && !showOrigReq ? requestData.description_translated : requestData.description}
+                </div>
+                {hasReqTr && (
+                  <button
+                    type="button"
+                    className="chat-tr-btn"
+                    onClick={() => setShowOriginal((prev) => ({ ...prev, __request: !prev.__request }))}
+                  >
+                    <Icon name="globe" size={12} />
+                    <span>{showOrigReq ? t('chat.seeTranslation') : t('chat.seeOriginal')}</span>
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {messages.length === 0 && (
             <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>

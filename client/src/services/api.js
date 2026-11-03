@@ -43,7 +43,7 @@ export const scanExercisePhoto = (data) => API.post('/requests/scan-exercise', d
 export const acceptRequest   = (data)        => API.post('/requests/accept', data);
 export const completeRequest = (data)        => API.post('/requests/complete', data);
 export const replaceMentor   = (data)        => API.post('/requests/replace-mentor', data);
-export const getRequestById  = (id)          => API.get(`/requests/${id}`);
+export const getRequestById  = (id, lang)    => API.get(`/requests/${id}${lang ? `?lang=${lang}` : ''}`);
 
 // Historique (multilingue pays)
 export const getMyRequests = (page, limit, lang) => API.get(`/requests/my-requests?page=${page}&limit=${limit}${lang ? `&lang=${lang}` : ''}`);
@@ -60,7 +60,7 @@ export const getPortfolio = (id) =>
 
 // Chat
 export const sendMessage    = (data) => API.post('/chat/message', data);
-export const getChatHistory = (requestId) => API.get(`/chat/${requestId}/history`);
+export const getChatHistory = (requestId, lang) => API.get(`/chat/${requestId}/history${lang ? `?lang=${lang}` : ''}`);
 
 // Meta AI — Traduction universelle NLLB-200 + Llama 3
 export const translateText = (data) => API.post('/translate', data);

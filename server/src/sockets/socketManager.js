@@ -3,6 +3,18 @@ const ChatService = require('../services/chat.service');
 const TranslateService = require('../services/translate.service');
 const User = require('../models/User');
 const Request = require('../models/Request');
+const Muse = require('../services/muse.service');
+const { contientContenuInterdit } = require('../utils/antiMarket');
+
+const BLOCKED_TEXT = {
+    fr: "Message bloqué : les paiements, ventes et demandes de faire les devoirs à la place d'un étudiant sont interdits sur Éco-Mentorat.",
+    en: "Message blocked: payments, sales and requests to do someone's homework are not allowed on Eco-Mentorat.",
+    ja: 'メッセージはブロックされました：支払い、販売、宿題の代行依頼はEco-Mentoratでは禁止されています。',
+    zh: '消息已被拦截：Eco-Mentorat 禁止付费交易、销售以及代做作业的请求。',
+    es: 'Mensaje bloqueado: los pagos, las ventas y las peticiones de hacer los deberes de otra persona están prohibidos en Eco-Mentorat.',
+    ar: 'تم حظر الرسالة: المدفوعات والبيع وطلب حل الواجبات بدلاً من الطالب ممنوعة في Eco-Mentorat.',
+    pt: 'Mensagem bloqueada: pagamentos, vendas e pedidos para fazer os trabalhos de outra pessoa são proibidos no Eco-Mentorat.'
+};
 
 class SocketManager {
     constructor(httpServer, corsOptions) {
@@ -34,8 +46,9 @@ class SocketManager {
             });
 
             // Rejoindre le salon privé d'une demande
-            socket.on('join_room', ({ requestId, userId, username }) => {
+            socket.on('join_room', ({ requestId, userId, username, lang }) => {
                 if (!requestId) return;
+                if (lang) socket.data.lang = TranslateService.normalizeLang(lang, null);
                 socket.join(requestId.toString());
                 console.log(`[SOCKET] ${username || userId} a rejoint le salon ${requestId}`);
             });
@@ -54,6 +67,30 @@ class SocketManager {
                     const srcLang = TranslateService.detectLanguage
                         ? TranslateService.detectLanguage(content, senderHint || 'fr')
                         : TranslateService.normalizeLang(senderHint, 'fr');
+
+                    // Modération du chat : filtre regex instantané + agent sémantique Meta (MARKET / CHEAT)
+                    if (content) {
+                        let blocked = contientContenuInterdit(content);
+                        let reason = null;
+                        if (!blocked && content.trim().length >= 12) {
+                            try {
+                                const reqTag = requestId ? await Request.findById(requestId).select('skillTag').lean() : null;
+                                const mod = await Promise.race([
+                                    Muse.sparkModerate(content, reqTag?.skillTag || 'general', srcLang),
+                                    new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+                                ]);
+                                if (mod && (mod.label === 'MARKET' || mod.label === 'CHEAT') && (mod.confidence ?? 1) >= 0.75) {
+                                    blocked = true;
+                                    reason = mod.reason || null;
+                                }
+                            } catch {}
+                        }
+                        if (blocked) {
+                            const base = BLOCKED_TEXT[srcLang] || BLOCKED_TEXT.en;
+                            socket.emit('message_error', { code: 'BLOCKED', message: reason ? `${base}\n${reason}` : base });
+                            return;
+                        }
+                    }
                     let savedMsg = null;
                     let skillTag = 'general';
 
@@ -75,6 +112,14 @@ class SocketManager {
                                 if (reqDoc.requesterId && reqDoc.requesterId.toString() !== senderId.toString()) receiverId = reqDoc.requesterId;
                                 else if (reqDoc.mentorId && reqDoc.mentorId.toString() !== senderId.toString()) receiverId = reqDoc.mentorId;
                                 let recvLang = TranslateService.normalizeLang(targetLang, null);
+                                // Langue d'interface réellement choisie par le destinataire (connecté dans le salon)
+                                if (!recvLang) {
+                                    try {
+                                        const peers = await this.io.in(requestId.toString()).fetchSockets();
+                                        const peer = peers.find((p) => p.id !== socket.id && p.data?.lang);
+                                        if (peer) recvLang = peer.data.lang;
+                                    } catch {}
+                                }
                                 if (!recvLang && receiverId) {
                                     const recv = await User.findById(receiverId).select('preferredLang').lean();
                                     if (recv) recvLang = TranslateService.normalizeLang(recv.preferredLang, 'fr');

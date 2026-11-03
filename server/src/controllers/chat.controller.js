@@ -49,7 +49,7 @@ class ChatController {
     static async getHistory(req, res, next) {
         try {
             const { requestId } = req.params;
-            const messages = await ChatService.getMessageHistory(requestId, req.user.id);
+            const messages = await ChatService.getMessageHistory(requestId, req.user.id, req.query.lang || null);
             res.status(200).json({
                 status: 'success',
                 results: messages.length,

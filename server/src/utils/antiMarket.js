@@ -23,7 +23,14 @@ const PATTERNS_INTERDITS = [
     /\b(?:verse\s*moi|envoie\s*le\s*crédit|fais\s*un\s*dépôt|gombo|tchoko|motivation\s*financière)\b/i,
     // Tentative de déviation vers WhatsApp / Téléphone (numéros camerounais 9 chiffres : 6xx... ou internationaux)
     /\b(?:whatsapp|telegram|contacte[zr]?\s*moi\s*au)\b/i,
-    /\b(?:\+?237\s*)?6[25789]\d{1}[-.\s]?\d{2}[-.\s]?\d{2}[-.\s]?\d{2}\b/
+    /\b(?:\+?237\s*)?6[25789]\d{1}[-.\s]?\d{2}[-.\s]?\d{2}[-.\s]?\d{2}\b/,
+    // Paiement en échange d'un service (FR : paye/payer/payé ; EN : pay you / I'll pay)
+    /\b(?:je\s+(?:te|vous)\s+pay\w*|(?:tu|vous)\s+(?:vas|allez)\s+être\s+pay\w*|pay\w*\s+(?:toi|moi))\b/i,
+    /\b(?:i['’]?ll|i\s+will|i\s+can|i\s+would|let\s+me)\s+pay\b|\bpay\s+(?:you|me)\b|\bi['’]?ll\s+give\s+you\s+\d+/i,
+    /\b(?:argent|money|cash|salary|salaire)\b/i,
+    // Triche : faire les exercices / devoirs à la place de l'étudiant
+    /\b(?:fais|fait|faire|traite|traiter|résous|resous|résoudre|do|solve|complete|finish)\s+(?:tous\s+|toutes\s+|all\s+|every\s+)?(?:mes|my)\s+(?:exercices?|devoirs?|exercises?|homework|assignments?|examens?|exams?|tp|projets?|projects?)\b/i,
+    /\b(?:à\s+ma\s+place|in\s+my\s+place|instead\s+of\s+me)\b/i
 ];
 
 /**
