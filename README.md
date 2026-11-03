@@ -1,0 +1,167 @@
+# Éco-Mentorat — Borderless Peer-to-Peer Student Mentoring Network
+
+> **"One question. Any language. The whole world answers."**  
+> *« Ici, la langue n'est plus une frontière. »*
+
+**Track:** Meta Global AI Developer Hackathon — *Build for Your World*  
+**Author:** NONO YOTCHA Serena Lynn  
+**Repository:** [https://github.com/nonoserena/Eco-Mentorat](https://github.com/nonoserena/Eco-Mentorat)
+
+---
+
+## 1. Overview / Présentation Générale
+
+**EN —** **Éco-Mentorat** is a peer-to-peer academic mentoring platform designed with an **Africa-first, low-bandwidth (`< 1 KB/message`, 2G/3G-resilient)** architecture that connects students across borders and languages (e.g., **Douala ↔ Osaka ↔ Rabat ↔ São Paulo**). Powered by an orchestrated pipeline of **6 Meta AI models**, students can photograph a notebook exercise, dictate a question by voice, get matched with a qualified peer mentor, collaborate in real time in **8 languages** (`FR`, `EN`, `JA`, `AR`, `PT`, `ES`, `WO`, `ZH`) with an instant *"See original"* toggle, and earn **verified skill certifications** exported to a recruiter-ready PDF portfolio.
+
+**FR —** **Éco-Mentorat** est une plateforme d'entraide académique pair-à-pair conçue selon une architecture **Afrique-first ultra-légère (`< 1 Ko/message`, compatible 2G/3G)** qui connecte les étudiants sans frontières ni barrières de langue (ex. **Douala ↔ Osaka ↔ Rabat ↔ São Paulo**). Propulsée par **6 modèles d'IA Meta**, elle permet de scanner un cahier d'exercice, dicter une question en vocal, échanger en temps réel dans **8 langues** avec le bouton fixe *« Voir l'original »*, protéger l'éthique académique contre les annonces commerciales ou la triche, et certifier les compétences des mentors sur un portfolio PDF vérifié.
+
+---
+
+## 2. Meta Global AI Developer Hackathon — Baseline vs. New Work
+
+In compliance with the Hackathon rules (*New work only / Startups & existing projects*), here is the exact distinction verifiable via `git log`:
+
+| Phase | Commit & Date | Scope |
+|---|---|---|
+| **Pre-Hackathon Baseline** | `d707daa` (`2026-10-10`) | Initial MERN scaffold (authentication, basic request board, single-language Socket.io chat, Docker setup). **Zero Meta AI model integration.** |
+| **Built During Hackathon** | `7f19666` → `HEAD` (`2026-10-27` – `2026-11-03`) | Complete **6-Model Meta AI Agentic Layer** (`server/src/services/muse.service.js`), real-time cross-language chat & feed translation (`muse-spark-1.3`), autonomous anti-market & anti-cheat moderation (`muse-spark-open-1026`), notebook exercise ROI segmentation & OCR (`sam-3.1` + `Muse Spark Vision`), 2G voice dictation (`muse-voice-transcribe-1.0`), low-latency auto-tagging (`muse-glimmer-1.0`), session summarization & skill certification (`muse-wonder-1.0`), 8-language i18n with RTL support, and Academic Design System v3. |
+
+---
+
+## 3. The 6 Meta AI Models at the Core of Éco-Mentorat
+
+All Meta models are orchestrated in [`server/src/services/muse.service.js`](server/src/services/muse.service.js) and exposed for live verification at `GET /api/meta` ([`server/src/routes/meta.routes.js`](server/src/routes/meta.routes.js)):
+
+| # | Meta AI Model | Role in Éco-Mentorat | Trigger / Endpoint |
+|---|---|---|---|
+| **1** | **`muse-spark-1.3`** *(Muse Spark series)* | **Real-Time Pedagogical Translation:** Contextual translation across 8 languages (`FR`, `EN`, `JA`, `AR`, `PT`, `ES`, `WO`, `ZH`) preserving code syntax and subject terminology (`skillTag`) in `< 1 KB` payloads. | `POST /api/translate`, WebSocket `send_message`, `GET /api/requests/all` |
+| **2** | **`meta-models/muse-spark-open-1026`** *(Muse Spark Open)* | **Autonomous Academic Moderation Agent:** Evaluates both help requests and live chat messages, returning structured JSON `{"label": "OK\|MARKET\|CHEAT", "confidence": 0-1, "reason": "..."}` in the user's language to block commercial spam, paid homework offers, and exam cheating. | `POST /api/requests/create`, WebSocket `send_message` |
+| **3** | **`muse-glimmer-1.0`** *(Muse Glimmer Open-Weights)* | **Low-Latency Auto-Tagging & Routing:** Classifies student questions into normalized academic tags (`#python`, `#java`, `#reseau`, `#mathematiques`, etc.) and difficulty levels (`Débutant`, `Intermédiaire`, `Avancé`). | `POST /api/requests/auto-tag` |
+| **4** | **`sam-3.1` + `muse-spark-1.3` Vision** | **2-Stage Notebook Exercise Scanner:** `sam-3.1` segments and isolates the exercise bounding box (`roi`) from a photographed notebook page, and `Muse Spark Vision` transcribes the problem statement into a structured request. | `POST /api/requests/scan-exercise` |
+| **5** | **`muse-voice-transcribe-1.0`** | **2G Low-Bandwidth Voice Dictation:** Converts spoken student questions into clean, punctuated academic problem statements. | `POST /api/requests/voice-transcribe` |
+| **6** | **`muse-wonder-1.0` & `muse-image-1.0`** | **Session Summary & Skill Certification:** Analyzes the mentoring transcript upon closure to generate a 2-sentence pedagogical summary (`aiSummary`) and a certified skill badge (`verifiedSkill`) added to the mentor's PDF portfolio. | `POST /api/requests/complete` |
+
+---
+
+## 4. Key Features Implemented
+
+- **Real-Time Multilingual Request Feed & Chat (`FR`, `EN`, `JA`, `AR`, `PT`, `ES`, `WO`, `ZH`):**
+  - Automatic detection of the actual language written by the student (even if their UI is set to another language).
+  - Live translation into each viewer's active interface language with MongoDB + in-memory LRU caching.
+  - Non-shifting **"See original / See translation"** button on both chat messages and the pinned request header inside the mentoring room.
+- **Dual-Layer Academic Protection (Regex + Agentic AI):**
+  - Instant zero-latency filter ([`server/src/utils/antiMarket.js`](server/src/utils/antiMarket.js)) combined with `muse-spark-open-1026` semantic moderation blocking product sales, payment offers (*"je te paye 500 tu me traites mes exercices"*), and exam cheating on both request creation and live chat.
+- **Anti-Collusion Weighted Reputation & Recruiter PDF Portfolio:**
+  - Mathematical reputation score weighting stars, completion ratio (`helpCount / acceptedCount`), and unique learners helped, with a 48-hour anti-collusion window ([`server/src/utils/reputation.js`](server/src/utils/reputation.js)).
+  - Downloadable certified PDF portfolio (`GET /api/users/:id/portfolio`).
+
+---
+
+## 5. Tech Stack & Project Structure
+
+- **Frontend (`client/`):** React 19, Vite, Socket.io-client, `react-i18next` (8 languages + Arabic RTL), custom Academic Flat Design System v3.
+- **Backend (`server/`):** Node.js, Express, MongoDB & Mongoose, Socket.io, PDFKit, JWT authentication, Helmet & Rate Limiting.
+
+```text
+eco-mentorat/
+├── client/                     # React + Vite frontend (port 5173)
+│   └── src/
+│       ├── components/         # DashboardLayout, LanguageSwitcher, ThemeToggle, Icon...
+│       ├── context/            # AuthContext, ThemeContext
+│       ├── i18n/               # 8-language translation dictionaries (FR, EN, JA, AR, PT, ES, WO, ZH)
+│       ├── pages/              # Landing, auth/, dashboard/, chat/, profile/
+│       └── services/api.js     # Axios API client
+├── server/                     # Express + Socket.io backend (port 5000)
+│   └── src/
+│       ├── controllers/        # auth, request, chat, translate, user
+│       ├── models/             # User, Request, Message
+│       ├── routes/             # REST endpoints + /api/meta jury manifest
+│       ├── scripts/            # reset-db.js (clean slate), seed.js, backup.js
+│       ├── services/           # muse.service.js, translate.service.js, request.service.js...
+│       ├── sockets/            # socketManager.js (real-time translation + moderation)
+│       └── utils/              # antiMarket.js, reputation.js, tagNormalizer.js
+├── HACKATHON.md                # Hackathon submission documentation & model mapping
+└── README.md                   # Project documentation & long-term vision
+```
+
+---
+
+## 6. Quickstart — Local Installation & Execution
+
+### Prerequisites
+- **Node.js** `>= 18.x`
+- **MongoDB** running locally on `mongodb://localhost:27017/eco_mentorat`
+- **Meta Model API Key** (`META_API_KEY`)
+
+### 1. Clone & Configure Environment
+```bash
+git clone https://github.com/nonoserena/Eco-Mentorat.git
+cd Eco-Mentorat
+cp .env.example .env
+```
+Fill in `.env` at the root of the project:
+```env
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/eco_mentorat
+JWT_SECRET=your_strong_jwt_secret_key
+CLIENT_URL=http://localhost:5173
+META_MODEL_API_URL=https://api.meta.ai/v1
+META_API_KEY=your_meta_api_key
+MUSE_SPARK_MODEL=muse-spark-1.3
+```
+
+### 2. Install Dependencies
+```bash
+cd server && npm install
+cd ../client && npm install
+```
+
+### 3. Optional — Reset Database to a Clean Slate ("En Blanc")
+```bash
+npm run db:reset --prefix server
+```
+
+### 4. Start Backend & Frontend
+Open two terminals at the root of the repository:
+```bash
+# Terminal 1 — Backend API & WebSocket server (http://localhost:5000)
+npm run dev:server
+
+# Terminal 2 — React Vite client (http://localhost:5173)
+npm run dev:client
+```
+
+---
+
+## 7. Vision & Future Roadmap — From Mentoring Platform to Borderless Educational Social Network
+
+Éco-Mentorat is designed to evolve progressively from a peer-to-peer help board into a **complete, borderless educational social network and academic career ecosystem**. Every upcoming module builds directly on our multi-model AI foundation:
+
+### Phase 1 — Multimodal Cross-Language Communication (Documents, Voice & Calls)
+1. **Replica-Layout Cross-Language Document & Exercise Translation (Douala ↔ Osaka):**
+   - When a Japanese student sends a PDF or image worksheet written entirely in Japanese to a Cameroonian peer, Éco-Mentorat will store the original file in the database, extract and transcribe its content and layout via **SAM 3.1 + Muse Spark Vision**, and deliver a **translated twin copy (`copie conforme`)** in the recipient's language while preserving the original file for reference.
+2. **Natural-Accent Voice Messages in Chat (`Voices Transcrits & Doublés`):**
+   - Integration of voice notes inside the mentoring chat where spoken messages are transcribed, translated into the recipient's language, and synthesized with a **natural tone and localized accent** matching the recipient's language, alongside the written transcript.
+3. **Real-Time Translated Audio & Video Calls:**
+   - Low-bitrate peer-to-peer audio and video mentoring calls between students from different countries and languages, with live speech-to-speech/caption translation.
+
+### Phase 2 — AI Fairness Judge for Mentor Ratings (Anti-Bad-Faith Protection)
+4. **Automated Conversation Quality & Fair Rating Auditor:**
+   - To protect mentors against bad-faith learners (e.g., a student who receives thorough, step-by-step help from a mentor but unfairly leaves a 1-star rating at session closure), an **AI Arbitration Agent (`Muse Spark`)** will analyze the complete session transcript, verify the pedagogical quality of the help provided, and automatically adjust or assign a **fair, objective rating** to protect the mentor's reputation score.
+
+### Phase 3 — The 100% Educational Social Network
+5. **Progressive Convergence of Messaging, Communities & Short Educational Media:**
+   - **Communities & Study Groups *(WhatsApp-inspired)*:** Thematic study groups, university/school channels, and peer communities with instant cross-language translation.
+   - **Academic Feed & Knowledge Sharing *(Facebook-inspired)*:** Students publish study notes, solved challenges, tutorials, and academic discussions.
+   - **Short Educational Video Feed, Podcasts & Lives *(TikTok-inspired)*:** Short-form explanatory videos by student creators, educational podcasts, live revision sessions, interactive quizzes, full courses, and **inter-team / inter-country academic challenges**.
+
+### Phase 4 — Verified Tutoring ("Répétiteurs") & Recruiter Marketplace *(Cameroon & Global)*
+6. **Home Tutor Discovery (`Statut Répétiteur`) & Company Talent Hub *(LinkedIn-inspired)*:**
+   - **For Students & Families (e.g., in Cameroon):** High-performing mentors can activate a **Verified Tutor (`Répétiteur`) status** backed by their real Éco-Mentorat reputation score and AI-certified skills. Families and younger students can search, filter, and book trusted local or remote tutors, while the platform manages offers and listings.
+   - **For Companies & Institutions:** Organizations can publish internships, scholarships, and job offers, and recruit top students directly from their verified mentoring portfolio.
+
+---
+
+## 8. License
+
+Distributed under the **ISC License**. Built with passion for students worldwide.
