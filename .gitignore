@@ -25,3 +25,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Documents et vidéos locales (ne pas versionner)
+*.pdf
+*.mp4
